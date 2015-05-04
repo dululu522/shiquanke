@@ -1,0 +1,251 @@
+//
+//  CMCIntroductionTableVC.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 15-1-20.
+//  Copyright (c) 2015年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCIntroductionTableVC.h"
+#import "CMCQScrollView.h"
+#import "CMCIntroductionTableViewCell.h"
+
+@interface CMCIntroductionTableVC ()
+{
+    UIView *_backView;
+}
+@property (nonatomic, strong) CMCQScrollView *mainScorllView;
+@property (nonatomic, strong) UIPageControl *pageControl;
+@property (nonatomic, strong) NSMutableArray *focusImageArray;
+@property (nonatomic, strong) NSMutableDictionary *introDic;
+
+
+
+@end
+
+@implementation CMCIntroductionTableVC
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    [self.mainScorllView stopScorllView];
+    
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.title = @"简介";
+    self.introDic = [[NSMutableDictionary alloc] init];
+    self.focusImageArray = [[NSMutableArray alloc] init];
+    
+    [BaseUtil setExtraCellLineHidden:self.tableView];
+    self.tableView.separatorColor = [UIColor clearColor];
+    self.tableView.separatorStyle =  UITableViewCellSeparatorStyleNone;
+    
+    
+    // Uncomment the following line to preserve selection between presentations.
+    // self.clearsSelectionOnViewWillAppear = NO;
+    
+    // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
+    // self.navigationItem.rightBarButtonItem = self.editButtonItem;
+    _backView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 0.3 * self.view.bounds.size.height)];
+    self.tableView.tableHeaderView = _backView;
+    self.mainScorllView = [[CMCQScrollView alloc] initWithFrame:CGRectMake(0, 0,self.view.bounds.size.width, 0.3 * self.view.bounds.size.height)];
+    [_backView addSubview:self.mainScorllView];
+    [self creatScrollViewAndPagControl];
+    [self loadData];
+}
+- (void)creatScrollViewAndPagControl
+{
+    _pageControl = [[UIPageControl alloc] init];
+    _pageControl.userInteractionEnabled = NO;
+    _pageControl.backgroundColor = [UIColor clearColor];
+    _pageControl.frame = CGRectMake(0, 155, self.view.bounds.size.width, 25);//0, 0, 320, 25
+    _pageControl.numberOfPages = 0;
+    _pageControl.currentPage = 0;
+    [_pageControl addTarget:self action:@selector(changePage:)forControlEvents:UIControlEventValueChanged];
+    [_backView addSubview:_pageControl];
+}
+
+- (void)loadData
+{
+    [self.introDic removeAllObjects];
+    if ([CMCUserManager shareManager].token && self.zid ) {
+        NSString *timestamp = kAPI_timestamp;
+        NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"app_ver":APPVersion,@"token":[CMCUserManager shareManager].token,@"zid":self.zid,@"timestamp":timestamp};
+        NSString *sig = [BaseUtil getSigWithArray:dic];
+        NSString *requestUrl = KAPI_propertyIntro([CMCUserManager shareManager].token, self.zid, timestamp, [BaseUtil md5:sig]);
+        [BaseUtil get:requestUrl success:^(id respondObject) {
+            NSLog(@"简介 %@",respondObject);
+            [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+            NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+            if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+                if ([respondObject objectForKey:@"data"]) {
+                    NSDictionary *dataDic = [respondObject objectForKey:@"data"];
+                    [self.introDic addEntriesFromDictionary:[respondObject objectForKey:@"data"]];
+                    if ([[dataDic objectForKey:@"logo"] isKindOfClass:[NSArray class]]) {
+                        NSArray *logoArr = [dataDic objectForKey:@"logo"];
+                        if ([logoArr count]) {
+                            for (NSString *str in logoArr) {
+                                if ([str length]) {
+                                    NSURL *url = [BaseUtil systemRandomlyGenerated:str type:@"11" number:@"1"];
+                                    [self.focusImageArray addObject:url];
+                                }
+                            }
+                            _mainScorllView.imageArr = [NSMutableArray arrayWithArray:self.focusImageArray];
+                            [_mainScorllView creatWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 130) cout:self.focusImageArray.count];
+                        }
+                    }
+                    [self.tableView reloadData];
+                    [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                    
+                } else {
+                    
+                    [BaseUtil toast:@"暂无数据"];
+                    [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                    
+                }
+            } else if([[infoDic objectForKey:@"result"] intValue] == 3) {
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                
+                CMCLoginViewController *loginVC = [[CMCLoginViewController alloc] init];
+                [self.navigationController pushViewController:loginVC animated:YES];
+                loginVC.hidesBottomBarWhenPushed = YES;
+                
+                
+            } else {
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                [BaseUtil toast:@"服务端数据错误"];
+            }
+            
+        } failure:^(NSError *error) {
+            
+        }];
+
+        
+    }
+
+}
+- (void)changePage:(UIPageControl *)pageControl
+{
+
+
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    // Return the number of sections.
+
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    // Return the number of rows in the section.
+//    if (self.addressArr) {
+//        return 4;
+//    }
+    return self.introDic.count;
+}
+
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *str = @"reused";
+    CMCIntroductionTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:str];
+    if (cell == nil) {
+        cell = [[CMCIntroductionTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:str];
+    }
+    
+    // Configure the cell...
+    if (self.introDic) {
+        if (indexPath.row == 0) {
+            [cell creatIntroductionCellImage:@"Introduction_name" labelText:[self.introDic objectForKey:@"name"]];
+        }
+        if (indexPath.row == 1) {
+            [cell creatIntroductionCellImage:@"Introduction_address" labelText:[self.introDic objectForKey:@"address"]];
+        }
+        if (indexPath.row == 2) {
+            [cell creatIntroductionCellImage:@"Introduction_note" labelText:@"物业简介"];
+            
+        }
+        if (indexPath.row == 3) {
+            [cell creatIntroductionTitleText:[self.introDic objectForKey:@"intro"]];
+            
+        }
+    }
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+//    if (indexPath.row == 0 && indexPath.row == 1&& indexPath.row == 2) {
+//        return 44;
+//    }
+    if (indexPath.row == 3) {
+        if ([self.introDic isKindOfClass:[NSDictionary class]]) {
+            if (![[self.introDic objectForKey:@"intro"] isKindOfClass:[NSNull class]]) {
+
+                float high =  [self heightForString:[self.introDic objectForKey:@"intro"] fontSize:11 andWidth:self.view.frame.size.width - 50];
+                return high;
+            }
+            return 0;
+        }
+
+    }
+    return 44;
+}
+- (float) heightForString:(NSString *)value fontSize:(float)fontSize andWidth:(float)width
+{
+    CGSize sizeToFit = [value sizeWithFont:[UIFont systemFontOfSize:fontSize] constrainedToSize:CGSizeMake(width, CGFLOAT_MAX) lineBreakMode:NSLineBreakByWordWrapping];//此处的换行类型（lineBreakMode）可根据自己的实际情况进行设置
+    return sizeToFit.height;
+}
+/*
+// Override to support conditional editing of the table view.
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Return NO if you do not want the specified item to be editable.
+    return YES;
+}
+*/
+
+/*
+// Override to support editing the table view.
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        // Delete the row from the data source
+        [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+    } else if (editingStyle == UITableViewCellEditingStyleInsert) {
+        // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
+    }   
+}
+*/
+
+/*
+// Override to support rearranging the table view.
+- (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath {
+}
+*/
+
+/*
+// Override to support conditional rearranging of the table view.
+- (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Return NO if you do not want the item to be re-orderable.
+    return YES;
+}
+*/
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

@@ -1,0 +1,293 @@
+//
+//  CMCQuanViewController.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 14-10-9.
+//  Copyright (c) 2014年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCQuanViewController.h"
+#import "CMCMyVoucherTableViewCell.h"
+#import "CMCMyVoucherDetailVC.h"
+
+#import "HeaderButton.h"
+#import "CMCAccountVouchers.h"
+
+@interface CMCQuanViewController ()
+{
+
+    UIImageView *_imageView;
+    UIImageView *_chooseImageView;
+
+    NetWorkRequest *_request;
+    UIButton *_leftBtn;
+    UIButton *_rightBtn;
+    NSInteger _page;
+    
+}
+
+@property (nonatomic, strong) UITableView *aTableView;
+@property (nonatomic, strong) NSString *type;
+@property (nonatomic, strong) NSString *stutes;
+@property (nonatomic, strong) NSMutableArray *accountVoucherArr;//券
+@property (nonatomic, strong) NSArray *allArr;
+
+@end
+
+@implementation CMCQuanViewController
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self creatNavigatioknButton];
+}
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [_leftBtn removeFromSuperview];
+    [_rightBtn removeFromSuperview];
+    [_chooseImageView removeFromSuperview];
+
+}
+- (void)creatBackButton
+{
+    
+    //后退按钮
+    UIButton *billButton = [[UIButton alloc] initWithFrame:CGRectMake(5, 5, 10, 20)];
+    [billButton setBackgroundImage:[UIImage imageNamed:@"后退_03"] forState:UIControlStateNormal];
+    [billButton addTarget:self action:@selector(didClickBackBtn:) forControlEvents:UIControlEventTouchUpInside];
+    [billButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    UIBarButtonItem *leftBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:billButton];
+    self.navigationItem.leftBarButtonItem = leftBarButtonItem;
+}
+- (void)didClickBackBtn:(UIButton *)button
+{
+    [self.navigationController popViewControllerAnimated:YES];
+    
+}
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    self.view.backgroundColor = [UIColor whiteColor];
+    [self creatBackButton];
+    self.accountVoucherArr = [[NSMutableArray alloc] init];
+    self.tabBarController.tabBar.hidden = YES;
+    _page = 1;
+
+    
+    
+
+}
+- (void)creatNavigatioknButton
+{
+    //左边的折扣券按钮
+    
+    UIImage *leftImage = [UIImage imageNamed:@"myVour_leftselect"];
+    _leftBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _leftBtn.frame = CGRectMake(self.view.frame.size.width/2 - leftImage.size.width, 24, leftImage.size.width, leftImage.size.height);
+    _leftBtn.tag = k_tagTwo;
+    [_leftBtn setTitle:@"折扣券" forState:UIControlStateNormal];
+    _leftBtn.titleLabel.font = [UIFont systemFontOfSize:14.0];
+    [_leftBtn setBackgroundImage:leftImage forState:UIControlStateNormal];
+    [_leftBtn addTarget:self action:@selector(didClickLeftBtn:) forControlEvents:UIControlEventTouchUpInside];
+    [self.navigationController.view addSubview:_leftBtn];
+    
+    //右边的代金券按钮
+    UIImage *rightImage = [UIImage imageNamed:@"myVour_right"];
+    _rightBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    _rightBtn.frame = CGRectMake(self.view.frame.size.width/2, 24, rightImage.size.width, rightImage.size.height);
+    _rightBtn.tag = k_tagTwo +1;
+    [_rightBtn setTitle:@"代金券" forState:UIControlStateNormal];
+    _rightBtn.titleLabel.font = [UIFont systemFontOfSize:14.0];
+    
+    [_rightBtn setBackgroundImage:rightImage forState:UIControlStateNormal];
+    [_rightBtn addTarget:self action:@selector(didClickRightBtn:) forControlEvents:UIControlEventTouchUpInside];
+    [self.navigationController.view addSubview:_rightBtn];
+    
+    [self creatTableView];
+    
+    [self loadDataType:@"0"];
+
+
+
+}
+- (void)creatTableView
+{
+    self.aTableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, 320, self.view.bounds.size.height)];
+    self.aTableView.delegate = self;
+    self.aTableView.dataSource = self;
+    [self.view addSubview:self.aTableView];
+    self.aTableView.hidden = NO;
+    self.aTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+}
+- (void)didClickLeftBtn:(UIButton *)button
+{
+    [self.accountVoucherArr removeAllObjects];
+    [self.aTableView removeFromSuperview];
+    [self creatTableView];
+    //折扣券
+    _page = 1;
+    NSLog(@"2000");
+    [button setBackgroundImage:[UIImage imageNamed:@"myVour_leftselect"] forState:UIControlStateNormal];
+    [_rightBtn setBackgroundImage:[UIImage imageNamed:@"myVour_right"] forState:UIControlStateNormal];
+    [self loadDataType:@"0"];
+
+}
+- (void)didClickRightBtn:(UIButton *)button
+{
+    [self.accountVoucherArr removeAllObjects];
+    [self.aTableView removeFromSuperview];
+    [self creatTableView];
+
+    //代金券
+    _page = 1;
+    [button setBackgroundImage:[UIImage imageNamed:@"myVour_rightselect"] forState:UIControlStateNormal];
+    [_leftBtn setBackgroundImage:[UIImage imageNamed:@"myVour_left"] forState:UIControlStateNormal];
+    [self loadDataType:@"1"];
+
+}
+- (void)loadDataType:(NSString *)type
+{
+    [self.accountVoucherArr removeAllObjects];
+    NSString *pageStr = [NSString stringWithFormat:@"%ld",_page];
+    NSString *timestamp = kAPI_timestamp;
+    if ([CMCUserManager shareManager].token) {
+        [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"type":type,@"page":pageStr,@"nums":@"8",@"timestamp":kAPI_timestamp};
+        NSLog(@"折扣券: %@",dic);
+        NSString *sig = [BaseUtil getSigWithArray:dic];
+        NSString *requestUrl = kAPI_getMycoupon([CMCUserManager shareManager].token, [BaseUtil md5:sig], type, pageStr, @"8");
+        NSLog(@"折扣券URL %@",requestUrl);
+        [BaseUtil get:requestUrl success:^(id respondObject) {
+            NSLog(@"折扣券: %@",respondObject);
+            NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+            
+            [BaseUtil pushToLoginVCWithRespondObj:respondObject withViewController:self];
+            [BaseUtil errorMesssage:respondObject];
+            
+            if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+                if ([respondObject objectForKey:@"data"]) {
+                    NSArray *dataArr = [respondObject objectForKey:@"data"];
+                    self.allArr = [[NSArray alloc] initWithArray:dataArr];
+                    
+                    for (NSDictionary *tempDic in dataArr) {
+                        CMCAccountVouchers *accountVouchers = [[CMCAccountVouchers alloc] initWithAccountVouchers:tempDic];
+                        [self.accountVoucherArr addObject:accountVouchers];
+                    }
+                    [self.aTableView reloadData];
+                    [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                }else {
+                    
+                    [BaseUtil toast:@"暂无数据"];
+                    [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+                }
+            } else {
+                [BaseUtil toast:@"服务端数据错误"];
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+            }
+            
+        } failure:^(NSError *error) {
+            
+        }];
+
+    }
+}
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    
+    return self.accountVoucherArr.count;
+}
+
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    static NSString *str = @"reuse";
+    CMCMyVoucherTableViewCell *cell = [self.aTableView dequeueReusableCellWithIdentifier:str];
+    if (!cell) {
+        cell = [[CMCMyVoucherTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:str];
+    }
+    cell.type = self.type;
+       cell.selectionStyle = UITableViewCellSelectionStyleNone;
+        CMCAccountVouchers *v = [self.accountVoucherArr objectAtIndex:indexPath.row];
+        [cell creatCellAccountVouchers:v];
+   return cell;
+}
+-(CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+//    return 163 ;
+    return 174;
+}
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSLog(@"self.allArr =======%@",self.allArr);
+     CMCMyVoucherDetailVC *myVoucherDetailVC = [[CMCMyVoucherDetailVC alloc] init];
+     myVoucherDetailVC.hidesBottomBarWhenPushed = YES;
+    if (self.accountVoucherArr) {
+        CMCAccountVouchers *accountVouchers = [self.accountVoucherArr objectAtIndex:indexPath.row];
+        if ([accountVouchers.type intValue] == 1){
+            myVoucherDetailVC.coupon_id = accountVouchers.coupon_id;
+            myVoucherDetailVC.title = @"代金券详情";
+            myVoucherDetailVC.category = @"代金券详情";
+            myVoucherDetailVC.voucherDic = [self.allArr objectAtIndex:indexPath.row];
+            [self.navigationController pushViewController:myVoucherDetailVC animated:YES];
+            
+        }
+        if ([accountVouchers.type intValue] == 0) {
+            myVoucherDetailVC.title = @"折扣券详情";
+            myVoucherDetailVC.category = @"折扣券详情";
+            myVoucherDetailVC.coupon_id = accountVouchers.coupon_id;
+            myVoucherDetailVC.voucherDic = [self.allArr objectAtIndex:indexPath.row];
+            [self.navigationController pushViewController:myVoucherDetailVC animated:YES];
+            
+        }
+
+
+    }
+//    if ([self.type intValue] == 1) {
+//        CMCMyVoucherDetailVC *myVoucherDetailVC = [[CMCMyVoucherDetailVC alloc] init];
+//        myVoucherDetailVC.title = @"折扣券详情";
+//        myVoucherDetailVC.category = @"折扣券详情";
+//        myVoucherDetailVC.hidesBottomBarWhenPushed = YES;
+////        myVoucherDetailVC.voucherDic = [self.accountVoucherArr objectAtIndex:indexPath.row];
+//        [self.navigationController pushViewController:myVoucherDetailVC animated:YES];
+//    }
+//    if ([self.type intValue] == 0) {
+//        CMCMyVoucherDetailVC *myVoucherDetailVC = [[CMCMyVoucherDetailVC alloc] init];
+//        myVoucherDetailVC.title = @"代金券详情";
+//        myVoucherDetailVC.category = @"代金券详情";
+//        myVoucherDetailVC.hidesBottomBarWhenPushed = YES;
+//        myVoucherDetailVC.voucherDic = [self.accountVoucherArr objectAtIndex:indexPath.row];
+//        [self.navigationController pushViewController:myVoucherDetailVC animated:YES];
+//    }
+
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

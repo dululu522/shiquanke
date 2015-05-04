@@ -1,0 +1,658 @@
+//
+//  TCHomePageViewController.m
+//  TelecomCommunity
+//
+//  Created by mac on 14-12-5.
+//  Copyright (c) 2014年 zhangyanqiu. All rights reserved.
+//
+
+#import "TCHomePageViewController.h"
+//#import "CycleScrollView.h"
+//#import "CMCCycleScrollView.h"
+
+//#import "TCHomePageCollectionViewCell.h"
+//#import "TCStoreListViewController.h"
+#import "CMCButtonViewController.h"
+#import "TCHomePageTableViewCell.h"
+#import "CMCCityListViewController.h"
+#import "CMCConvenientLifeListVC.h"
+//#import "CMCYouHuiDetailVC.h"
+#import "CMCWebPageViewController.h"
+#import "CMCPreferentialDetailsVC.h"
+#import "CMCShopDetailViewController.h"
+#import "CMCMyScrollView.h"
+#import "SMPageControl.h"
+#import "CMCGoMovieViewController.h"
+#import "CMCAutoServiceViewController.h"
+#import "CMCDiscountHomeVC.h"
+
+#import "AFHTTPRequestOperationManager.h"
+#import "CMCHomePageMerchant.h"
+#import "CMCQScrollView.h"
+#import "CMCConvenientLifeDetailVC.h"
+#import "CMCHousingInformationTableVC.h"
+#import "CMCCommunityBanksVC.h"
+
+@interface TCHomePageViewController ()
+{
+    
+    UILabel *_cityLabel;
+    UIImageView *_cityImageView;
+    UIButton *_cityButton;
+    UIScrollView *_buttonScrollView;
+    UIScrollView *_backScrollView;
+    UIView *_frontView;
+    NetWorkRequest *_request;
+    //    NetWorkRequest *_cityRequest;
+    UIButton *_middleButton;
+    
+    CMCQScrollView *_qScrollView;//banner上得scrollView
+    
+    UIView *_cityView;
+}
+//@property (nonatomic, strong) CMCMyScrollView *mainScorllView;
+@property (nonatomic, strong) NSMutableArray *buttonImageArr;//button上的图片
+@property (nonatomic, strong) NSMutableArray *buttonTitleArr;//button上的图片
+@property (nonatomic, strong) UITableView *myTableview;
+@property (nonatomic, strong) UISearchBar *searchBar; //搜索框
+@property (nonatomic, strong) UITextField *searchBarTextField;
+@property (nonatomic, strong) NSMutableArray *merchant_nameArr;
+@property (nonatomic, strong) NSMutableArray *merchant_imageArr;
+@property (nonatomic, strong) NSMutableArray *merchant_idArr;
+@property (nonatomic, strong) NSMutableArray *firstImageArr;
+@property (nonatomic, strong) NSMutableArray *cateNameArr;
+@property (nonatomic, strong) SMPageControl *buttonPageControl;
+@property (nonatomic, strong) NSMutableArray *merchantArr; //精品推荐上得商户
+
+
+
+
+
+
+@end
+
+@implementation TCHomePageViewController
+- (instancetype)init
+{
+    self = [super init];
+    if (self) {
+        self.title = @"首页";
+        self.tabBarItem.selectedImage = [UIImage imageNamed:@"homepage_select"];
+        self.tabBarItem.image = [UIImage imageNamed:@"homepage"];
+    }
+    return self;
+}
+- (void)viewWillAppear:(BOOL)animated
+{
+    [super viewWillAppear:animated];
+    [self creatTableView];
+
+//    self.tabBarController.tabBar.hidden = NO;
+    [MBProgressHUD hideHUDForView:self.view animated:YES];
+    _cityButton.hidden = NO;
+    _cityLabel.hidden = NO;
+    
+    _cityImageView.hidden = NO;
+//    _request = [[NetWorkRequest alloc] init];
+//    _request.delegate = self;
+    [self setupNag];//导航栏设置
+    [self creatTitleButton];
+    //    [self postData];
+    _backScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 320)];
+    //    [self.view addSubview:_backScrollView];
+    _backScrollView.contentSize = CGSizeMake(self.view.bounds.size.width, 320);
+    
+    UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 300, self.view.bounds.size.width, 20)];
+    titleLabel.text = @" 精品推荐";
+    titleLabel.font = [UIFont systemFontOfSize:14.0];
+    titleLabel.textColor = [UIColor colorWithHexString:@"676767"];
+    [_backScrollView addSubview:titleLabel];
+    self.myTableview.tableHeaderView = _backScrollView;
+    self.buttonImageArr = [[NSMutableArray alloc] initWithObjects:@"home_food",@"home_conveniencestore",@"home_housekeeping",@"home_laundry",@"home_beauty",@"home_leisure",@"homepage_car",@"homepage_groups",@"home_housing",@"homepage_bank", nil];
+
+
+//    self.buttonTitleArr = [[NSMutableArray alloc] init];
+    
+     _qScrollView = [[CMCQScrollView alloc] initWithFrame:CGRectMake(0, 0, 320, 130)];
+    [_backScrollView addSubview:_qScrollView];
+    [self creatButton];
+    if (k_zid) {
+        [self creatAllLoad];
+    }
+}
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    _cityLabel.hidden = YES;
+    _cityImageView.hidden = YES;
+    _cityButton.hidden = YES;
+    [_middleButton removeFromSuperview];
+    [_qScrollView stopScorllView];
+}
+
+- (void)loadTradeData
+{
+    self.buttonTitleArr = [[NSMutableArray alloc] init];
+    if (kAPI_Trade == nil) {
+        return;
+    } else {
+        for (NSDictionary *tempDic in kAPI_Trade) {
+            [self.buttonTitleArr addObject:[tempDic objectForKey:@"name"]];
+            
+            [self.cateNameArr addObject:[tempDic objectForKey:@"id"]];
+            
+        }
+    }
+
+
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.merchantArr = [[NSMutableArray alloc] init];
+    
+    self.merchant_imageArr = [[NSMutableArray alloc] init];
+    self.merchant_nameArr = [[NSMutableArray alloc] init];
+    self.merchant_idArr = [[NSMutableArray alloc] init];
+    
+    self.firstImageArr = [[NSMutableArray alloc] init];
+    self.cateNameArr = [[NSMutableArray alloc] init];
+
+
+   
+    
+    
+    
+}
+- (void)creatAllLoad
+{
+    NSString *timestamp = kAPI_timestamp;
+
+    if (k_zid) {
+        NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"app_ver":APPVersion,@"zid":k_zid,@"timestamp":kAPI_timestamp};
+        NSString *sig = [BaseUtil getSigWithArray:dic];
+        NSString *requestStr = KAPI_zone([BaseUtil md5:sig],k_zid);
+        [BaseUtil get:requestStr success:^(id respondObject) {
+            NSLog(@"获取首页banner上得数据  %@",respondObject);
+            NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+            
+            //[BaseUtil pushToLoginVCWithRespondObj:respondObject withViewController:self];
+            [BaseUtil errorMesssage:respondObject];
+            
+            if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+                if ([respondObject objectForKey:@"data"]) {
+                    
+                    NSDictionary *dataDic = [respondObject objectForKey:@"data"];
+                    //获取首页banner上得数据
+                    if ([dataDic objectForKey:@"banner"]) {
+                        NSArray *bannerArr = [dataDic objectForKey:@"banner"];
+//                        得到banner上得图片
+                                            NSMutableArray *innerBannerArr = [[NSMutableArray alloc] init];
+                                            for (int i = 0; i < bannerArr.count; i++) {
+                                                if ([[bannerArr objectAtIndex:i] length]) {
+                                                    NSURL *url = [BaseUtil systemRandomlyGenerated:[bannerArr objectAtIndex:i] type:@"11" number:@"1"];
+                                                    [innerBannerArr addObject:url];
+                                                }
+                                            }
+                                            //给banner上得数组赋值
+                                            _qScrollView.imageArr = [NSMutableArray arrayWithArray:innerBannerArr];
+                                            [_qScrollView creatWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 130) cout:bannerArr.count];
+                        
+                    }
+                    if ([[dataDic objectForKey:@"express"] isKindOfClass:[NSDictionary class]]) {
+
+
+                        NSDictionary *expressDic = [dataDic objectForKey:@"express"];
+                        
+                        NSString *express_money =[expressDic objectForKey:@"express_money"];
+                        NSString *order_money = [expressDic objectForKey:@"order_money"];
+                        if ([order_money isKindOfClass:[NSNull class]]) {
+                            [CMCUserManager shareManager].order_money = @"0";
+                        } else {
+                            [CMCUserManager shareManager].order_money = order_money;
+
+                        }
+                        if ([express_money isKindOfClass:[NSNull class]]) {
+                            [CMCUserManager shareManager].express_money = @"0";
+                        } else {
+                            [CMCUserManager shareManager].express_money = express_money;
+
+                        }
+
+                    }
+                    //获取精品推荐的数据
+                    if ([dataDic objectForKey:@"merchant"]) {
+                        [self.merchantArr removeAllObjects];
+                        [self.merchant_imageArr removeAllObjects];
+                        [self.merchant_nameArr removeAllObjects];
+                        NSArray *merchantArr = [dataDic objectForKey:@"merchant"];
+                        for (NSDictionary *tempDic in merchantArr) {
+                            CMCHomePageMerchant *homePageMerchant = [[CMCHomePageMerchant  alloc] initWithCMCHomePageMerchantDic:tempDic];
+                            [self.merchant_nameArr addObject:[tempDic objectForKey:@"name"]];
+                            [self.merchant_imageArr addObject:[tempDic objectForKey:@"image"]];
+                            [self.merchantArr addObject:homePageMerchant];
+                            [CMCUserManager shareManager].zid = [tempDic objectForKey:@"zid"];
+                        }
+                    }
+                    
+                    if ([[dataDic objectForKey:@"zone"] isKindOfClass:[NSDictionary class]]) {
+                        NSDictionary *zoneDic = [dataDic objectForKey:@"zone"];
+                        [CMCUserManager shareManager].cid = [zoneDic objectForKey:@"cid"];
+                        [[NSUserDefaults standardUserDefaults] setObject:[zoneDic objectForKey:@"city_id"] forKey:@"city_id"];
+                    }
+                    if ([[dataDic objectForKey:@"zbanner"] isKindOfClass:[NSString class]]) {
+                        [CMCUserManager shareManager].zbanner = [dataDic objectForKey:@"zbanner"];
+                    }
+                    
+                    [self.myTableview reloadData];
+                }
+            }
+            
+        } failure:^(NSError *error) {
+            
+        }];
+
+    }
+}
+- (void)creatTitleButton
+{
+//    self.title = @"";
+    _middleButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    _middleButton.backgroundColor = [UIColor colorWithHexString:@"eca205"];
+    [_middleButton setTitle:[CMCUserManager shareManager].z_name forState:UIControlStateNormal];
+    _middleButton.titleLabel.font = [UIFont systemFontOfSize:14.0];
+    _middleButton.frame = CGRectMake(self.view.frame.size.width/2 - 80, 27, 160, 30);
+    
+    _middleButton.titleLabel.textAlignment = NSTextAlignmentCenter;
+    [self.navigationController.view addSubview:_middleButton];
+//    self.title = [CMCUserManager shareManager].z_name ;
+    
+    
+}
+- (void)creatTableView
+{
+    [self.myTableview removeFromSuperview];
+//    self.myTableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height - 64)];
+//    self.myTableview = [[UITableView alloc] initWithFrame:self.view.bounds];
+    self.myTableview = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height - 64)];
+    self.myTableview.delegate = self;
+    self.myTableview.dataSource = self;
+    self.myTableview.hidden = NO;
+    self.myTableview.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [BaseUtil setExtraCellLineHidden:self.myTableview];
+    [self.view addSubview:self.myTableview];
+}
+
+
+#pragma mark -
+#pragma mark - 创建button
+- (void)creatButton
+{
+    _buttonScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 130, 320, 170)];
+    _buttonScrollView.contentSize = CGSizeMake(400, 160);
+    _buttonScrollView.pagingEnabled = YES;
+    _buttonScrollView.delegate = self;
+    _buttonScrollView.showsHorizontalScrollIndicator = NO;
+    _buttonScrollView.showsVerticalScrollIndicator = NO;
+    
+    [_backScrollView addSubview:_buttonScrollView];
+    
+    self.buttonPageControl = [[SMPageControl alloc] initWithFrame:CGRectMake(self.view.bounds.size.width/2 - 50  , 130 + 162 , 100, 6)];
+    self.buttonPageControl.currentPage = 0;
+    self.buttonPageControl.numberOfPages = 2;
+    [self.buttonPageControl setCurrentPageIndicatorImage:[UIImage imageNamed:@"home_downpointSelect"]];
+    [self.buttonPageControl setPageIndicatorImage:[UIImage imageNamed:@"home_downpoint"]];
+    [_backScrollView addSubview:self.buttonPageControl];
+    [self creatTradeButton];
+    
+}
+- (void)creatTradeButton
+{
+    [self loadTradeData];
+//    for (int i = 0; i < 2; i++) {
+    [self creatLeftTrade];
+    [self creatRightTrade];
+
+        
+//    }
+}
+//创建左边的八大行业
+- (void)creatLeftTrade
+{
+    UIView *buttonView = [UIButton buttonWithType:UIButtonTypeCustom];
+    buttonView.frame = CGRectMake(0, 0, self.view.frame.size.width, 160);
+    [_buttonScrollView addSubview:buttonView];
+    float WIDTH = 80;
+    
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 4; j++) {
+            UIView *bView = [[UIView alloc] initWithFrame:CGRectMake(0+WIDTH*j, 0 + WIDTH*i, WIDTH, WIDTH)];
+            bView.tag = 1000 + i*4+j;
+            [buttonView addSubview:bView];
+            UIImage *image = [UIImage imageNamed:[self.buttonImageArr objectAtIndex:i*4+j]];
+            float x = (WIDTH - image.size.width)/2;
+            UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(x, 15, image.size.width, image.size.height)];
+            imageView.userInteractionEnabled = YES;
+            imageView.image = [UIImage imageNamed:[self.buttonImageArr objectAtIndex:i*4+j]];
+            [bView addSubview:imageView];
+            
+            UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 15+image.size.height +10, WIDTH, 20)];
+            if (self.buttonTitleArr.count) {
+                label.text = [self.buttonTitleArr objectAtIndex:i*4+j];
+            }
+            [bView addSubview:label];
+            label.font = [UIFont systemFontOfSize:12.0];
+            label.textColor = [UIColor colorWithHexString:@"4e4e4e"];
+            label.textAlignment = NSTextAlignmentCenter;
+            
+            UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAction:)];
+            [bView addGestureRecognizer:tap];
+        }
+        
+    }
+
+}
+//scrollView右边的按钮
+- (void)creatRightTrade
+{
+    UIView *buttonTwoView = [UIButton buttonWithType:UIButtonTypeCustom];
+    buttonTwoView.frame = CGRectMake(self.view.frame.size.width, 0, self.view.frame.size.width, 160);
+    [_buttonScrollView addSubview:buttonTwoView];
+    
+    for (int i = 0; i < 2; i++) {
+        UIView *bView = [[UIView alloc] initWithFrame:CGRectMake(0, 0 + 80*i, 80, 80)];
+        
+        bView.tag = 1000 + 8+i;
+        [buttonTwoView addSubview:bView];
+        UIImage *image = [UIImage imageNamed:[self.buttonImageArr objectAtIndex:8+i]];
+        float x = (80 - image.size.width)/2;
+        UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(x, 15, image.size.width, image.size.height)];
+        imageView.userInteractionEnabled = YES;
+        imageView.image = [UIImage imageNamed:[self.buttonImageArr objectAtIndex:8+i]];
+        [bView addSubview:imageView];
+        UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 15+image.size.height +10, 80, 20)];
+        if (self.buttonTitleArr.count) {
+            label.text = [self.buttonTitleArr objectAtIndex:8+i];
+        }
+        [bView addSubview:label];
+        label.font = [UIFont systemFontOfSize:12.0];
+        label.textColor = [UIColor colorWithHexString:@"4e4e4e"];
+        label.textAlignment = NSTextAlignmentCenter;
+        
+        UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapAction:)];
+        [bView addGestureRecognizer:tap];
+    }
+
+
+}
+#pragma mark - 行业跳转
+- (void)tapAction:(UITapGestureRecognizer *)tap
+{
+
+  if (tap.view.tag - 1000 == 7) {
+        //优惠专区
+        CMCDiscountHomeVC *homeVC = [[CMCDiscountHomeVC alloc]init];
+         homeVC.hidesBottomBarWhenPushed = YES;
+      homeVC.title = [self.buttonTitleArr objectAtIndex:tap.view.tag- 1000];
+        [self.navigationController pushViewController:homeVC animated:YES];
+      return;
+  } else if(tap.view.tag - 1000 == 9){
+  
+      CMCCommunityBanksVC *communityBankVC = [[CMCCommunityBanksVC alloc] init];
+      communityBankVC.title = [self.buttonTitleArr objectAtIndex:tap.view.tag- 1000];
+      communityBankVC.hidesBottomBarWhenPushed = YES;
+      [self.navigationController pushViewController:communityBankVC animated:YES];
+  }else{
+        CMCConvenientLifeListVC *convenientLifeListVC = [[CMCConvenientLifeListVC alloc] init];
+        convenientLifeListVC.hidesBottomBarWhenPushed = YES;
+      if ([self.cateNameArr count]) {
+          convenientLifeListVC.merchant_type = [self.cateNameArr objectAtIndex:tap.view.tag- 1000 ];
+          convenientLifeListVC.merchant_name = [self.buttonTitleArr objectAtIndex:tap.view.tag- 1000];
+          [self.navigationController pushViewController:convenientLifeListVC animated:YES];
+      }
+
+        return;
+    
+    }
+
+}
+- (void)didClickTradeBtn:(UIButton *)btn
+{
+
+
+
+}
+#pragma mark-
+#pragma mark- UIScrollViewDelegate
+- (void)scrollViewDidScroll:(UIScrollView *)scrollView
+{
+    if (scrollView == _buttonScrollView) {
+        CGFloat pagewith = _buttonScrollView.frame.size.width;
+        int currentPage = floor((_buttonScrollView.contentOffset.x - pagewith/ (2+2)) / pagewith) + 1;
+        self.buttonPageControl.currentPage = currentPage;
+    }
+    
+}
+- (void)didClickPageButton:(UIPageControl *)page
+{
+    
+    
+    
+}
+#pragma mark -
+#pragma mark - 导航栏上的 城市 搜索按钮
+- (void)setupNag{
+    
+    
+    _cityView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 100, 40)];
+    UILabel *cityLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 10, 40, 20)];
+    cityLabel.text = @"城市";
+    cityLabel.textColor = [UIColor whiteColor];
+    cityLabel.font = [UIFont systemFontOfSize:14.0];
+    [_cityView addSubview:cityLabel];
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:CGRectMake(40, 18, 8, 5)];
+    imageView.image = [UIImage imageNamed:@"city_left"];
+    [_cityView addSubview:imageView];
+    
+    _cityButton =[[UIButton alloc] initWithFrame:CGRectMake(0, 0   ,100, 40)];
+    NSString *cityStr = [[CMCUserManager shareManager].city stringByReplacingOccurrencesOfString:@"市" withString:@""];
+    cityLabel.text = cityStr;
+    
+    [_cityButton addTarget:self action:@selector(didClickCityButton:) forControlEvents:UIControlEventTouchUpInside];
+    [_cityView addSubview:_cityButton];
+    UIBarButtonItem *leftItem = [[UIBarButtonItem alloc] initWithCustomView:_cityView];
+    self.navigationItem.leftBarButtonItem = leftItem;
+    
+}
+- (void)didClickSearchButton:(UIButton *)button
+{
+    
+    _frontView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 320)];
+    _frontView.backgroundColor = [UIColor blackColor];
+    _frontView.alpha = 0.8;
+    [self.navigationController.navigationBar.superview addSubview:_frontView];
+    
+    self.searchBar = [[UISearchBar alloc] initWithFrame:CGRectMake(50, 20, self.view.frame.size.width - 100, 40)];
+    self.searchBar.userInteractionEnabled = YES;
+    self.searchBar.delegate =self;
+    self.searchBar.backgroundColor = [UIColor whiteColor];
+    [self.searchBar setPlaceholder:@"商户名/团购名"];
+    [_frontView addSubview:self.searchBar];
+    UIButton *frontSearchButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [frontSearchButton addTarget:self action:@selector(didClickFrontSearchButton:) forControlEvents:UIControlEventTouchUpInside];
+    [frontSearchButton setBackgroundImage:[UIImage imageNamed:@"homepage_search"] forState:UIControlStateNormal];
+    frontSearchButton.userInteractionEnabled = YES;
+    frontSearchButton.frame = CGRectMake(self.view.bounds.size.width - 35, 28, 20, 20);
+    [_frontView addSubview:frontSearchButton];
+}
+//点击城市按钮
+- (void)didClickCityButton:(UIButton *)button
+{
+    CMCCityListViewController *cityListVC = [[CMCCityListViewController alloc] init];
+    cityListVC.hidesBottomBarWhenPushed = YES;
+    
+    [self.navigationController pushViewController:cityListVC animated:YES];
+    
+    
+}
+#pragma mark -
+#pragma mark - UITextFieldDelegate
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
+    
+    
+    [_searchBarTextField resignFirstResponder];
+    return YES;
+}
+-(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
+{
+    
+}
+#pragma mark -
+#pragma mark - UISearchBarDelegate
+
+- (void)searchBarCancelButtonClicked:(UISearchBar *)searchBar
+
+{
+    
+    [self.searchBar resignFirstResponder];
+    
+}
+-(void)searchBarSearchButtonClicked:(UISearchBar *)searchBar
+{
+    //    [self addsearchString:searchBar.text];
+    
+    
+    
+    [self loadSearchData];
+    //    StoreListViewController* store = [[StoreListViewController alloc]init];
+    //    store.searchString = self.searchBar.text;
+    //    store.hidesBottomBarWhenPushed = YES;
+    //    [self.navigationController pushViewController:store animated:YES];
+    //    [self.searchBar removeFromSuperview];
+}
+- (void)didClickFrontSearchButton:(UIButton *)button
+{
+    [self loadSearchData];
+    
+}
+#pragma mark -
+#pragma mark - TCHomePageTableViewCellDelegate
+
+- (void)didClickItems:(NSInteger)merchant_id
+{
+    CMCHomePageMerchant *homePageMerchant = [self.merchantArr objectAtIndex:merchant_id];
+
+    CMCConvenientLifeDetailVC *detailVC = [[CMCConvenientLifeDetailVC alloc] init];
+    detailVC.mid = homePageMerchant.mid;
+    detailVC.title = homePageMerchant.name;
+    detailVC.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:detailVC animated:YES];
+}
+#pragma mark -
+#pragma mark - 加载搜索页面的数据
+- (void)loadSearchData
+{
+    NSDictionary *dic = @{@"center_id":[CMCUserManager shareManager].login_id,@"merchant_name":self.searchBar.text,@"type":@"1"};
+    
+    NSDictionary *postDic = [BaseUtil postString:[dic JSONString] postUrlString:kAPI_getSearch];
+    NSDictionary *infoDic = [postDic objectForKey:@"info"];
+    
+  
+    if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+        if ([postDic objectForKey:@"data"]) {
+            NSArray *dataArr = [postDic objectForKey:@"data"];
+            NSDictionary *tempDic = [dataArr lastObject];
+            NSString *merchant_id = [tempDic objectForKey:@"merchant_id"];
+            CMCButtonViewController *storeListVC = [[CMCButtonViewController alloc] init];
+            storeListVC.center_id = merchant_id;
+            storeListVC.merchant_name = self.searchBar.text;
+            [self.navigationController pushViewController:storeListVC animated:YES];
+            [self.searchBar resignFirstResponder];
+            [_frontView removeFromSuperview];
+            
+            
+        } else {
+            
+            [BaseUtil toast:@"暂无相关的内容"];
+            [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+        }
+    }
+    
+    
+    [self.searchBar resignFirstResponder];
+    
+    
+}
+//点击搜索frontview页面上的后退按钮
+- (void)didClickFrontViewBackButton:(UIButton *)button
+{
+    [_frontView removeFromSuperview];
+    
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+{
+    if (self.merchant_imageArr) {
+        return 1;
+    }
+    return 0;
+    
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    
+    if (self.merchant_nameArr.count %2 == 0) {
+        if (self.merchant_nameArr.count/2 > 4) {
+            return 144+4;
+        }
+        return self.merchant_nameArr.count/2 *72;
+        
+    } else {
+        if (self.merchant_nameArr.count/2 > 4) {
+            return 144+4;
+        }
+        
+        return (self.merchant_nameArr.count+1)*72;
+        
+    }
+    
+    
+    return 0;
+    //    return 82;
+    
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    NSString *str = @"reused";
+    TCHomePageTableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:str];
+    if (cell == nil) {
+        cell = [[TCHomePageTableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:str];
+    }
+    [cell creatLabel:self.merchant_nameArr imageStr:self.merchant_imageArr];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    
+    
+    cell.delegate = self;
+    
+    return cell;
+    
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
+
+@end

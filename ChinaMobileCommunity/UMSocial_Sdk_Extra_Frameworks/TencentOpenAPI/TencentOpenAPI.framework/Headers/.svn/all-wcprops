@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 137
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers
+END
+WeiyunAPI.h
+K 25
+svn:wc:ra_dav:version-url
+V 149
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/WeiyunAPI.h
+END
+QQApi.h
+K 25
+svn:wc:ra_dav:version-url
+V 145
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/QQApi.h
+END
+TencentApiInterface.h
+K 25
+svn:wc:ra_dav:version-url
+V 159
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/TencentApiInterface.h
+END
+QQApiInterface.h
+K 25
+svn:wc:ra_dav:version-url
+V 154
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/QQApiInterface.h
+END
+TencentMessageObject.h
+K 25
+svn:wc:ra_dav:version-url
+V 160
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/TencentMessageObject.h
+END
+WeiBoAPI.h
+K 25
+svn:wc:ra_dav:version-url
+V 148
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/WeiBoAPI.h
+END
+sdkdef.h
+K 25
+svn:wc:ra_dav:version-url
+V 146
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/sdkdef.h
+END
+TencentOAuth.h
+K 25
+svn:wc:ra_dav:version-url
+V 152
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/TencentOAuth.h
+END
+QQApiInterfaceObject.h
+K 25
+svn:wc:ra_dav:version-url
+V 160
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/QQApiInterfaceObject.h
+END
+TencentOAuthObject.h
+K 25
+svn:wc:ra_dav:version-url
+V 158
+/svn/cm/!svn/ver/4033/ios/ShiQuanKeNew/ChinaMobileCommunity/UMSocial_Sdk_Extra_Frameworks/TencentOpenAPI/TencentOpenAPI.framework/Headers/TencentOAuthObject.h
+END

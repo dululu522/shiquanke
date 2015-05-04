@@ -1,0 +1,157 @@
+//
+//  BaseUtil.h
+//
+//  Created by yager on 12-3-8.
+//  Copyright (c) 2012年 __MyCompanyName__. All rights reserved.
+//
+typedef enum {
+    UIBarButtonItemLeft = 0,
+    UIBarButtonItemRight
+}UIBarButtonItemPostion;
+#import <UIKit/UIKit.h>
+
+#import <Foundation/Foundation.h>
+#import <CoreLocation/CoreLocation.h>
+#import <QuartzCore/QuartzCore.h>
+
+#import "AFNetworking.h"
+#import "TKAlertCenter.h"
+#import "iVersion.h"
+
+@interface BaseUtil : NSObject
++(BOOL)isGSIM;
++(void)toastAlertWithTitle:(NSString *) title msg:(NSString *) msg;
++(void)toast:(NSString *) Msg;
++ (void)alertWithTitle:(NSString *)title msg:(NSString *)msg;
++ (BOOL)emptyLocation:(CLLocation *)location;
+
++ (BOOL)isEmpty:(NSString*)str;
++ (BOOL)notEmpty:(NSString*)str;
++ (BOOL)isEmptyOrNull:(NSString *)str;
+
++ (BOOL)isEmptyLoction:(NSString *)locInfo;
+
+//绘制隐形效果
++ (void)drawShadow:(UIView *)view shadowHeight:(CGFloat)height;
++ (void)drawShadow:(UIView *)view shadowHeight:(CGFloat)height cornerRadius:(CGFloat)radius;
+
+//电话操作
++ (NSString *)sanitizedPhoneNumberFromString:(NSString *)string;
++ (BOOL)phoneWithNumber:(NSString *)phoneNumber;
+//+ (void)callAndBack:(NSString *)phoneNum;
++ (void)callAndBackWeb:(NSString *)phoneNum;
+
+//计算时间间隔
++ (NSString *)intervalSinceNow:(NSString *)theDateStr;
+//返回时间格式  2013年3月18日 星期一
++ (NSString *)setDateTime: (NSDate*)dateValue;
+//获取系统年月
++ (NSString*)get_system_today_time;
+
++ (NSString*)returnWeek:(NSDate*)datee;
+
++ (void)startNetworkActivity;
++ (void)stopNetworkActivity;
+
+//公用的网络请求
+//+(BOOL)post:(NSDictionary *)params success:( void(^)(AFHTTPRequestOperation *operation, id jsonObject) ) success faiure:( void(^)(AFHTTPRequestOperation *operation, NSError *error) ) failure;
+//
+//+(BOOL)post:(NSDictionary *)params urlString:(NSString*)urlstr success:( void(^)(AFHTTPRequestOperation *operation, id jsonObject) ) success faiure:( void(^)(AFHTTPRequestOperation *operation, NSError *error) ) failure;
+
+//get
++(BOOL)get:(NSString *)apiurl success:( void(^)(AFHTTPRequestOperation *operation, id jsonObject) ) success faiure:( void(^)(AFHTTPRequestOperation *operation, NSError *error) ) failure;
+
++(BOOL)UMShareOnView:(UIViewController*)vc Text:(NSString*)text image:(UIImage*)image;
+
+//
++(UIBarButtonItem *)setNavigCustomBarItem:(NSString *) customImageName controller:(UIViewController *) vc position:(UIBarButtonItemPostion) position selector:(SEL) selector;
+//登陆界面
++(void)showingLogin;
+//个人信息
++(NSString *) userID;
+
++(NSString *)md5:(NSString *)inPutText;
++(NSString *)md5SubString:(NSString *)inPutText;
+
++ (BOOL)checkString:(NSString*)str hasString:(NSString*)str1;
+
++ (void)storeEmailInKeychain:(NSString*)email;
++ (void)storePasswordInKeychain:(NSString*)psd;
++ (NSString*)getEmailFromKeychain;
++ (NSString*)getPasswordFromKeychain;
+
+//验证邮箱格式
++ (BOOL)validateEmail:(NSString *)emailStr;
+//验证手机号格式
++ (BOOL)validateMobile:(NSString *)mobileNum;
+
+
+
++ (NSString*)returnDateFrom1970:(NSString*)str;
+////POST到服务器
+//+ (void)postString:(NSString *)postStr postUrlString:(NSString *)postUrlString successString:(NSString *)successString failedString:(NSString *)failedString;
+//POST到服务器
++ (NSDictionary *) postString:(NSString *)postStr postUrlString:(NSString *)postUrlString;
++(double)distanceBetweenOrderBy:(double)lat1 :(double)lat2 :(double)lng1 :(double)lng2;
++(double)distanceBetweenOrderBy:(double)lat2 :(double)lng2;//传入获取的经纬度,计算与当前位置的距离
+
+//地图定位需要的 当前位置  还有多个点poly
++ (BOOL)isPointInPolygonPoint:(NSString *)location poly:(NSString *)poly;
+//按字母顺序排列
++ (NSString *)getSigWithArray:(NSDictionary *)dic;
+//按照系统生成随机key访问的图片
++ (NSURL *)systemRandomlyGenerated:(NSString *)default_image number:(NSString *)number;
++ (NSURL *)systemRandomlyGenerated:(NSString *)default_image type:(NSString *)type number:(NSString *)number;
+//调用支付  tradeNO支付订单 productName:商品标题  price:商品的价格
++ (void )PaymentForGoodsTradeNO:(NSString *)tradeNO productName:(NSString *)productName amount:(NSString *)price;
+//物业 调用支付
++ (void)reWritePayForGoodsPartnerID:(NSString *)partnerID sellerID:(NSString *)sellerID price:(NSString *)price orderNO:(NSString *)orderNO notifyURL:(NSString *)notifyURL  subject:(NSString *)subject privateKey:(NSString *)privateKey;
+//去除tableView上多余的分割线
++ (void)setExtraCellLineHidden: (UITableView *)tableView;
+//通过时间戳获取时间
++ (NSString *)becomeNormalWithString:(NSString *)timeStr;
+//最新的post上传
++ (void)post:(NSString *)urlStr postBody:(NSDictionary *)postDic success:(void (^)(id responseObj))success ailure:(void (^)(NSError *error))failure;
+//设置中划线
++ (void)setCenterLineView:(UILabel *)label;
+
+//get数据请求
++(void)get:(NSString *)url success:(void (^)(id respondObject))success failure:(void (^)(NSError * error))failure;;
+//+(NSData *)decodeString:(NSString *)string;
+
+
++ (void)getMethod:(NSString *)url success:(void (^)(id respondObject))success failure:(void (^)(NSError *error))failure;
+
++ (void)postMethod:(NSString *)urlStr postBody:(NSDictionary *)postDic success:(void (^)(id respondObject))success ailure:(void (^)(NSError *error))failure;
+
+//翼支付的post请求上传
++ (void)bestPayPost:(NSString *)urlStr postBody:(NSDictionary *)postDic success:(void (^)(id respondObject))success ailure:(void (^)(NSError *error))failure;
++ (NSString *)getRequestUrlByType:(NSString *)type AndValue:(NSString *)value;
+
+
++ (CGRect)returnHeightWithContent:(NSString *)content
+                         WithFont:(CGFloat)font
+                            width:(CGFloat)width
+                           height:(CGFloat)height;//0316
+
+
+//根据服务ID找到服务对应得名字
++ (NSString *)returnCategoryWithService_id:(NSString *)service_id;
+
+//根据服务ID找到服务对应得分类
++ (NSString *)returnProcessWithService_id:(NSString *)service_id;
+
+//根据服务ID和状态得到状态的名字
++ (NSString *)returnCategoryWithService_id:(NSString *)service_id WithState:(NSString *)state;
+
+/** 绘制图片(将图片按照原比例的三分之一压缩) number 为你需要压缩的比例 */
++ (UIImage *)scaleToSize:(UIImage *)img WithNumber:(int)number;
+//根据给的物业地址找出对应的值
++ (NSString *)getPropertyAddressValue:(NSString *)value;
+
+//如果没有登录就跳转到登录界面
++ (void)pushToLoginVCWithRespondObj:(NSDictionary *)respond withViewController:(UIViewController *)controll;
+//判断有没有错误信息
++ (void)errorMesssage:(NSDictionary *)respond;
+
+@end

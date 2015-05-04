@@ -1,0 +1,437 @@
+//
+//  CMCGoodsDetailVC.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 15-2-4.
+//  Copyright (c) 2015年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCGoodsDetailVC.h"
+#import "CMCFoodModel.h"
+#import "CMCOrderMakeSureVC.h"
+#import "CMCDomesticServiceVC.h"
+#import "CMCMyScrollView.h"
+
+
+@interface CMCGoodsDetailVC ()
+{
+    UIScrollView *botScrollView;
+    UIImageView *imageView;
+    CMCMyScrollView *bannerImgV;//轮播图
+    UILabel *numberL;
+    UILabel *priceL;//商品价格
+    UILabel *edgeLabel;//多少个商品
+    UILabel *totalL;//总价
+}
+
+@property (nonatomic,strong)NSMutableArray *infoArr;//商品详情
+@property (nonatomic,strong)CMCFoodModel *dataModel;
+@property (nonatomic, strong) NSMutableArray *detailArr;//家政服务
+
+
+@end
+
+@implementation CMCGoodsDetailVC
+- (NSMutableArray *)infoArr{
+    if (_infoArr == nil) {
+        self.infoArr = [NSMutableArray array];
+    }
+    return _infoArr;
+}
+- (NSMutableArray *)detailArr
+{
+
+    if (_detailArr == nil) {
+        self.detailArr = [NSMutableArray array];
+    }
+    return _detailArr;
+
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"商品详情";
+    self.view.backgroundColor = [UIColor whiteColor];
+    // Do any additional setup after loading the view.
+//    [self createSubViews];
+
+    [self loadData];
+}
+
+
+
+#pragma mark - 加载数据 -
+//商品详情
+- (void)loadData{
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"app_ver":APPVersion,@"id":self.goodsId,@"timestamp":kAPI_timestamp};
+    NSLog(@"dic = %@",dic);
+    NSString *sig = KAPI_GetSig(dic);
+    NSString *url =  KAPI_MerchantGoodDetail(self.goodsId, sig);
+    
+    [BaseUtil get:url success:^(id respondObject) {
+        NSLog(@"respondobject = %@",respondObject);
+        if (IsSuccess) {
+            NSDictionary *dataDic = [respondObject objectForKey:@"data"];
+            _dataModel = [CMCFoodModel foodWithDic:dataDic];
+            [self.infoArr addObject:_dataModel.intro];
+            [self.detailArr addObject:dataDic];
+
+            [self createSubViews];
+        }
+        
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+    } failure:^(NSError *error) {
+        [BaseUtil toast:@"数据加载失败"];
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+        
+    }];
+    
+    
+    
+}
+
+
+
+#pragma mark - 创建子视图- 
+
+- (void)createSubViews{
+    
+    [self setupBttmScrV];
+    [self setupBanner];
+    [self setupGoodsInfo];
+    if ([self.titleStr isEqualToString:@"家政服务"]) {
+        [self creatButtomButton];
+        
+    } else {
+        [self creatBottomView];
+        
+    }
+    
+}
+#pragma mark - 预约服务按钮
+
+- (void)creatButtomButton
+{
+    UIView *bottomView = [[UIView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - 60, self.view.frame.size.width, 60)];
+    [self.view addSubview:bottomView];
+    UIButton *reservationBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    reservationBtn.backgroundColor = kAPI_AllMainColor;
+    [reservationBtn setTitle:@"预约服务" forState:UIControlStateNormal];
+    reservationBtn.frame = CGRectMake(20, 10, self.view.frame.size.width - 40, 40);
+    reservationBtn.layer.cornerRadius = 5;
+    [reservationBtn addTarget:self action:@selector(didClickReservationBtn) forControlEvents:UIControlEventTouchUpInside];
+    [bottomView addSubview:reservationBtn];
+    
+    
+}
+- (void)didClickReservationBtn
+{
+    CMCDomesticServiceVC *domesticVC = [[CMCDomesticServiceVC alloc] init];
+    domesticVC.serviceArr = self.detailArr;
+    domesticVC.service_id = self.service_id;
+    domesticVC.mid = self.mid;
+    domesticVC.hidesBottomBarWhenPushed = YES;
+    [self.navigationController pushViewController:domesticVC animated:YES];
+    
+    
+    
+}
+
+/**
+ *  底部
+ */
+- (void)setupBttmScrV{
+    botScrollView = [[UIScrollView alloc]init];
+    botScrollView.frame = CGRectMake(0, 0, self.view.width, self.view.height - 60);
+    botScrollView.backgroundColor = [UIColor colorWithHexString:@"f5f4f4"];
+    [self.view addSubview:botScrollView];
+    
+}
+
+
+/**
+ *  商品图
+ */
+- (void)setupBanner{
+    NSMutableArray *dataArr = [NSMutableArray array];
+    for (int i = 0;i < _dataModel.image.count; i++) {
+        NSString *urlStr = _dataModel.image[i];
+        NSURL *url = [BaseUtil systemRandomlyGenerated:urlStr type:@"" number:@"1"];
+        [dataArr addObject:url];
+    }
+    
+    bannerImgV = [[CMCMyScrollView alloc] initWithFrame:CGRectMake(0, 0, self.view.width, 160) animationDuration:2];
+    bannerImgV.dataArr = [NSArray arrayWithArray:dataArr];
+    [botScrollView addSubview:bannerImgV];
+
+    
+}
+
+
+- (void)setupGoodsInfo{
+    //白色底部
+    UIView *botmV = [[UIView alloc]init];
+    botmV.frame = CGRectMake(0,bannerImgV.bottom,self.view.width, 68);
+    botmV.backgroundColor = [UIColor whiteColor];
+    [botScrollView addSubview:botmV];
+    
+    //商品名字
+    UILabel *goodsNameLabel  = [[UILabel alloc] initWithFrame:CGRectMake(10,bannerImgV.bottom + 12,self.view.width - 20, 18)];
+    goodsNameLabel.text = _dataModel.name;//名字
+    goodsNameLabel.font = [UIFont systemFontOfSize:15];
+    goodsNameLabel.textColor = [UIColor colorWithHexString:@"656565"];
+    [botScrollView addSubview:goodsNameLabel];
+    
+    //商品价格
+    priceL = [[UILabel alloc] initWithFrame:CGRectMake(goodsNameLabel.left, goodsNameLabel.bottom + 10,goodsNameLabel.width, 13)];
+    if ([self.titleStr isEqualToString:@"家政服务"]) {
+        priceL.text = [NSString stringWithFormat:@"收费标准:￥%@",_dataModel.price];
+        
+    } else {
+        priceL.text = [NSString stringWithFormat:@"￥%@",_dataModel.price];
+        
+    }
+    priceL.font = [UIFont systemFontOfSize:14];
+    priceL.textColor = kAPI_AllMainColor;
+    [botScrollView addSubview:priceL];
+    
+//    //－
+//    UIButton *leftButton = [[UIButton alloc] initWithFrame:CGRectMake(priceL.right,imageView.bottom + 22.5, 37, 37)];
+//    [leftButton setBackgroundImage:[UIImage imageNamed:@"sub_new"] forState:UIControlStateNormal];
+//    [botScrollView addSubview:leftButton];
+//    [leftButton addTarget:self action:@selector(didClickLeftButton:) forControlEvents:UIControlEventTouchUpInside];
+//    
+//    //个数
+//    numberL = [[UILabel alloc] initWithFrame:CGRectMake(leftButton.right, leftButton.top, 37, 37)];
+//    numberL.textColor = [UIColor colorWithHexString:@"585858"];
+//    numberL.font = [UIFont systemFontOfSize:15.0];
+//    numberL.textAlignment = NSTextAlignmentCenter;
+//    numberL.text = [NSString stringWithFormat:@"%@",self.numberOfOrder];
+//    [botScrollView addSubview:numberL];
+//    UIImageView *lineImageView = [[UIImageView alloc] initWithFrame:CGRectMake(leftButton.right, numberL.height + numberL.top, numberL.width, 1)];
+//    lineImageView.image = [UIImage imageNamed:@"diancan_line"];
+//    [botScrollView addSubview:lineImageView];
+//    
+//    //+
+//    UIButton *rightButton = [[UIButton alloc] initWithFrame:CGRectMake(numberL.right, numberL.top, 37, 37)];
+//    [rightButton addTarget:self action:@selector(didClickRightButton:) forControlEvents:UIControlEventTouchUpInside];
+//    [rightButton setBackgroundImage:[UIImage imageNamed:@"add_new"] forState:UIControlStateNormal];
+//    
+//    [botScrollView addSubview:rightButton];
+    
+    
+    
+    //商品详情
+    UILabel *infoNL = [[UILabel alloc] init];
+    infoNL.frame = CGRectMake(10, botmV.bottom + 13,200, 12);
+    infoNL.text = @"商品详情";
+    infoNL.font = [UIFont systemFontOfSize:13];
+    infoNL.textColor = [UIColor colorWithHexString:@"8c8c8c"];
+    [botScrollView addSubview:infoNL];
+    
+//    CGFloat heigt = [BaseUtil returnHeightWithContent:_dataModel.intro];
+    CGRect rect = [BaseUtil returnHeightWithContent:_dataModel.intro WithFont:13 width:self.view.width - 20 height:0];
+    CGFloat heigt = rect.size.height;
+    NSLog(@"heigt ===== %.2f",heigt);
+    UIView *infoV = [[UIView alloc]init];
+//    infoV.frame = CGRectMake(0, infoNL.bottom + 7, self.view.width, 17 * self.infoArr.count + 15);
+    infoV.frame = CGRectMake(0, infoNL.bottom + 7, self.view.width, heigt + 15);
+    
+    infoV.backgroundColor = [UIColor whiteColor];
+    [botScrollView addSubview:infoV];
+    
+    
+//    for (int i = 0; i < self.infoArr.count; i++) {
+        UILabel *infoL = [[UILabel alloc]init];
+//        infoL.frame = CGRectMake(10, infoNL.bottom + 15 + (12 + 5)*i, self.view.width, 12);
+//        infoL.text = self.infoArr[i];
+        infoL.frame = CGRectMake(10, infoNL.bottom + 15, self.view.width - 20, heigt);
+        infoL.text = _dataModel.intro;
+        infoL.numberOfLines = 0;
+        infoL.textColor = [UIColor colorWithHexString:@"666666"];
+        infoL.font = [UIFont systemFontOfSize:13];
+        [botScrollView addSubview:infoL];
+//    }
+    
+    
+    botScrollView.contentSize = CGSizeMake(self.view.width, infoV.bottom);
+    
+    
+}
+/**
+ *  下面一条
+ */
+- (void)creatBottomView
+{
+    UIView *bottomView = [[UIView alloc] initWithFrame:CGRectMake(0, self.view.frame.size.height - 60, self.view.frame.size.width, 60)];
+    [self.view addSubview:bottomView];
+    
+    
+    UIImage *image = [UIImage imageNamed:@"shopCar_goods"];
+    UIImageView *shopCarImageView = [[UIImageView alloc] initWithFrame:CGRectMake(15, 25, image.size.width, image.size.height)];
+    shopCarImageView.image = image;
+    [bottomView addSubview:shopCarImageView];
+    
+    edgeLabel = [[UILabel alloc] initWithFrame:CGRectMake(shopCarImageView.right -5, 15, 15, 15)];
+    edgeLabel.backgroundColor = [UIColor colorWithHexString:@"ff8f21"];
+    edgeLabel.layer.cornerRadius = 7.5;
+    edgeLabel.clipsToBounds = YES;
+    edgeLabel.text = [NSString stringWithFormat:@"%ld",(long)[self returnEadgeNum]];
+    edgeLabel.font = k_font(15);
+    edgeLabel.textAlignment = NSTextAlignmentCenter;
+    [bottomView addSubview:edgeLabel];
+    
+    UILabel *combinedLabel = [[UILabel alloc] initWithFrame:CGRectMake(edgeLabel.right + 10, 0, 30, 70)];
+    combinedLabel.font = [UIFont systemFontOfSize:13.0];
+    combinedLabel.textColor = [UIColor colorWithHexString:@"4d4d4d"];
+    combinedLabel.text = @"合计:";
+    [bottomView addSubview:combinedLabel];
+    
+    totalL = [[UILabel alloc] initWithFrame:CGRectMake(combinedLabel.right+2, 0, 100, 70)];
+    totalL.text = [NSString stringWithFormat:@"%.2f",[self returnTotalPrice]];
+    totalL.textColor = [UIColor colorWithHexString:@"4d4d4d"];
+    totalL.font = [UIFont systemFontOfSize:13.0];
+    [bottomView addSubview:totalL];
+    
+    UIButton *sureBtt = [UIButton buttonWithType:UIButtonTypeCustom];
+    sureBtt.frame = CGRectMake(215, 10, 90, 40);
+    [sureBtt setBackgroundImage:[UIImage imageNamed:@"确定"] forState:UIControlStateNormal];
+    [sureBtt setTitle:@"确定" forState:UIControlStateNormal];
+    [sureBtt addTarget:self action:@selector(MakeSureAction:) forControlEvents:UIControlEventTouchUpInside];
+    [bottomView addSubview:sureBtt];
+}
+
+
+
+#pragma mark - button响应的方法 -
+
+//减号方法
+- (void)didClickLeftButton:(UIButton *)sender{
+    if ([numberL.text intValue] > 0) {
+        int number = [numberL.text intValue];
+        number = number - 1;
+        numberL.text = [NSString stringWithFormat:@"%d",number];
+        
+    }else{
+        [BaseUtil toast:@"没有购买此商品"];
+    }
+    NSArray *infoArr = [NSArray arrayWithObjects:_dataModel.image.firstObject,_dataModel.name,_dataModel.price,_dataModel.id, nil];
+    [[CMCUserManager shareManager].orderDic setObject:numberL.text forKey:infoArr];
+    [[CMCUserManager shareManager].dataDic setObject:numberL.text forKey:infoArr];
+    
+    float price = [self returnTotalPrice];
+    totalL.text = [NSString stringWithFormat:@"%.2f",price];
+    
+    
+    //购物数量
+    NSInteger num = [self returnEadgeNum];
+    edgeLabel.text = [NSString stringWithFormat:@"%d",num];
+    NSLog(@"dic = %@",[CMCUserManager shareManager].orderDic);
+}
+
+//加号方法
+- (void)didClickRightButton:(UIButton *)sender{
+    int number = [numberL.text intValue];
+    number = number + 1;
+    numberL.text = [NSString stringWithFormat:@"%d",number];
+    
+    NSArray *infoArr = [NSArray arrayWithObjects:_dataModel.image.firstObject,_dataModel.name,_dataModel.price,_dataModel.id, nil];
+    [[CMCUserManager shareManager].orderDic setObject:numberL.text forKey:infoArr];
+    [[CMCUserManager shareManager].dataDic setObject:numberL.text forKey:infoArr];
+    
+    float price = [self returnTotalPrice];
+    totalL.text = [NSString stringWithFormat:@"%.2f",price];
+    
+    
+    //购物数量
+    NSInteger num = [self returnEadgeNum];
+    edgeLabel.text = [NSString stringWithFormat:@"%d",num];
+    NSLog(@"dic = %@",[CMCUserManager shareManager].orderDic);
+    
+}
+
+
+//确定按钮响应方法
+- (void)MakeSureAction:(UIButton *)sender{
+    
+//    if ([CMCUserManager shareManager].orderDic.count == 0) {
+//        [BaseUtil toast:@"您还没有点菜"];
+//        return;
+//    }
+//    
+//    CMCOrderMakeSureVC *makeSureVC = [[CMCOrderMakeSureVC alloc]init];
+//    makeSureVC.price = priceL.text;
+//    NSLog(@"orderDic = %@",[CMCUserManager shareManager].orderDic);
+//    makeSureVC.orderDic = [CMCUserManager shareManager].orderDic;
+//    makeSureVC.merchant_name = self.merchant_name;
+//    makeSureVC.category = self.category;
+//    [self.navigationController pushViewController:makeSureVC animated:YES];
+    [self.navigationController popViewControllerAnimated:YES];
+    
+    
+}
+
+#pragma mark - 公共方法 － 
+
+- (float)returnTotalPrice{
+    NSArray *keyArr = [CMCUserManager shareManager].orderDic.allKeys;
+    NSArray *valueArr = [CMCUserManager shareManager].orderDic.allValues;
+    //购物总价格
+    float price = 0;
+    for (int i = 0; i < keyArr.count; i++) {
+        NSArray *arr = keyArr[i];
+        price += ([arr[2] floatValue] * [valueArr[i] integerValue]);
+    }
+    return price;
+}
+
+
+
+- (NSInteger)returnEadgeNum{
+    NSArray *keyArr = [CMCUserManager shareManager].orderDic.allKeys;
+    NSArray *valueArr = [CMCUserManager shareManager].orderDic.allValues;
+    NSInteger num = 0;
+    for (int i = 0; i < valueArr.count; i++) {
+        if ([valueArr[i] integerValue] == 0) {
+            [[CMCUserManager shareManager].orderDic removeObjectForKey:keyArr[i]];
+        }
+        num += [valueArr[i] integerValue];
+    }
+    return num;
+}
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    if (edgeLabel.text.length &&totalL.text.length) {
+        NSArray *object = @[edgeLabel.text,totalL.text];
+    [[NSNotificationCenter defaultCenter] postNotificationName:@"againAddData" object:object];
+    }
+
+    [bannerImgV.animationTimer invalidate];//使计时器实效
+}
+
+
+- (CGFloat)returnHeightWithContent:(NSString *)content{
+    
+    CGSize size = [content sizeWithFont:[UIFont systemFontOfSize:13] constrainedToSize:CGSizeMake(self.view.width, 0) lineBreakMode:NSLineBreakByWordWrapping];
+    return size.height;
+}
+
+
+#pragma mark  end
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

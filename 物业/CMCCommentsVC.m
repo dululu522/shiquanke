@@ -1,0 +1,323 @@
+//
+//  CMCCommentsVC.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 14-11-10.
+//  Copyright (c) 2014年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCCommentsVC.h"
+#import "StarView.h"
+#import "ReslutView.h"
+#import "Config.h"
+
+@interface CMCCommentsVC ()<UITableViewDataSource,UITableViewDelegate>
+{
+
+    UIScrollView *_backScrollView;
+    StarView *_starView;
+    NSInteger _num;
+}
+@property (nonatomic,strong) NSMutableArray *titleArr;//标题数组
+@property (nonatomic,strong)UITableView *myTableView;
+@property (nonatomic,strong)UIView *bottomView;
+@property (nonatomic,strong)UIButton *submitButton;
+@property (nonatomic,strong)__block NSMutableArray *commentArr;
+@property (nonatomic, strong) NSString *serviceNumber;
+@property (nonatomic, strong) NSString *repairNumber;
+@property (nonatomic, strong) NSString *envirNumber;
+@property (nonatomic, strong) NSString *guardNumber;
+@property (nonatomic, strong) NSString *safeNumber;
+
+
+
+
+
+
+
+- (void)_creatTable;//创建tableview
+- (void)_setupCommentView;//设置评论
+- (void)_setupSubmit;//提交button
+@end
+
+@implementation CMCCommentsVC
+- (NSMutableArray *)titleArr{
+    if (_titleArr == nil) {
+        self.titleArr = [NSMutableArray arrayWithObjects:@"1.您对物业服务对整体感觉是否满意？",@"2.您对小区对公共维修服务是否满意？",@"3.您对小区对公共环境是否满意？",@"4.您对小区对保安服务是否满意？",@"5.您对小区对安全设施是否满意？", nil];
+        
+    }
+    return _titleArr;
+}
+- (NSMutableArray *)commentArr{
+    if (_commentArr == nil) {
+        self.commentArr = [NSMutableArray array];
+    }
+    return _commentArr;
+}
+
+#pragma mark -自定义方法－
+
+- (void)_creatTable{
+    self.myTableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 300)];
+    self.myTableView.scrollEnabled = NO;//关闭滑动功能
+    self.myTableView.delegate = self;
+    self.myTableView.dataSource = self;
+    self.myTableView.rowHeight = 30;
+    self.myTableView.backgroundColor = [UIColor brownColor];
+    self.myTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [_backScrollView addSubview:self.myTableView];
+    
+    
+}
+
+- (void)_setupCommentView{
+    UILabel *allComment = [[UILabel alloc]initWithFrame:CGRectMake(0, 0, 90, 20)];
+    allComment.text = @"所有评论:";
+    allComment.font = [UIFont systemFontOfSize:11];
+    [self.bottomView addSubview:allComment];
+    NSLog(@"所有评论:  %d",[self.serviceNumber integerValue]);
+    [self _creatReslutViewWithTitle:@"物业服务" frame:CGRectMake(20, 22, 240, 20) andNumber:[self.serviceNumber integerValue]/_num];
+    [self _creatReslutViewWithTitle:@"公共维修" frame:CGRectMake(20, 44, 240, 20) andNumber:[self.repairNumber integerValue]/_num];
+    [self _creatReslutViewWithTitle:@"公共环境" frame:CGRectMake(20, 66, 240, 20) andNumber:[self.envirNumber integerValue]/_num];
+    [self _creatReslutViewWithTitle:@"保安服务" frame:CGRectMake(20, 88, 240, 20) andNumber:[self.guardNumber integerValue]/_num];
+    [self _creatReslutViewWithTitle:@"安全措施" frame:CGRectMake(20, 110, 240, 20) andNumber:[self.safeNumber integerValue]/_num];
+
+
+    
+}
+
+- (void)_setupBottomView{
+    self.bottomView = [[UIView alloc]initWithFrame:CGRectMake(20, 300, 280, 135)];
+    self.bottomView.backgroundColor = [UIColor colorWithHexString:@"f5f4f4"];
+    [_backScrollView addSubview:self.bottomView];
+}
+
+- (void)_setupSubmit{
+    UIView *backView = [[UIView alloc] initWithFrame:CGRectMake(0, self.view.bounds.size.height - 64, self.view.bounds.size.width, 64)];
+    backView.backgroundColor = [UIColor whiteColor];
+    [self.navigationController.view addSubview:backView];
+    self.submitButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    self.submitButton.frame = CGRectMake(100, self.view.bounds.size.height - 64 + 10, 124, 40);
+    [self.submitButton setTitle:@"提交" forState:UIControlStateNormal];
+    [self.submitButton addTarget:self action:@selector(didClickSubmitButton:) forControlEvents:UIControlEventTouchUpInside];
+    [self.submitButton setBackgroundImage:[UIImage imageNamed:@"确定"] forState:UIControlStateNormal];
+    //    submitBtt.backgroundColor = [UIColor greenColor];
+    [self.navigationController.view addSubview:self.submitButton];
+}
+- (void)_loadData{
+//    if ([CMCUserManager shareManager].login_id) {
+//        NSDictionary *dic = @{@"center_id":[CMCUserManager shareManager].login_id};
+//        NSLog(@"得到物业评分 ======%@",dic);
+//        NSDictionary *postDic = [BaseUtil postString:[dic JSONString] postUrlString:KAPI_Addappraise];
+//        NSLog(@"postDic === %@",postDic);
+//    }
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    NSString *timestamp = kAPI_timestamp;
+    NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"app_ver":APPVersion,@"token":[CMCUserManager shareManager].token,@"zid":self.wuye_zid,@"timestamp":timestamp};
+    NSString *sig = [BaseUtil getSigWithArray:dic];
+    NSString *requestUrl = KAPI_geteval([CMCUserManager shareManager].token, self.wuye_zid, timestamp, [BaseUtil md5:sig]);
+    [BaseUtil get:requestUrl success:^(id respondObject) {
+        NSLog(@"获取评分 respondObject ========%@",respondObject);
+        NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+        
+        [BaseUtil pushToLoginVCWithRespondObj:respondObject withViewController:self];
+        [BaseUtil errorMesssage:respondObject];
+        
+        if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+            if ([respondObject objectForKey:@"data"]) {
+                NSDictionary *dataDic = [respondObject objectForKey:@"data"];
+                self.serviceNumber = [dataDic objectForKey:@"one"];
+                self.repairNumber = [dataDic objectForKey:@"two"];
+                self.envirNumber = [dataDic objectForKey:@"three"];
+                self.guardNumber = [dataDic objectForKey:@"four"];
+                self.safeNumber = [dataDic objectForKey:@"five"];
+                _num = [[dataDic objectForKey:@"num"] integerValue];
+                [self _setupCommentView];
+
+
+            } else if([[infoDic objectForKey:@"result"] intValue] == 3){
+                CMCLoginViewController *loginVC =[[CMCLoginViewController alloc] init];
+                [self.navigationController pushViewController: loginVC animated:YES];
+                loginVC.hidesBottomBarWhenPushed = YES;
+            } else {
+            
+                [BaseUtil toast:@"服务端数据错误"];
+            }
+            
+        }
+        [MBProgressHUD hideAllHUDsForView: self.view animated:YES];
+    } failure:^(NSError *error) {
+        
+    }];
+    
+    
+}
+//提交评价
+- (void)didClickSubmitButton:(UIButton *)button
+{
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    NSMutableDictionary *tempDic = [[NSMutableDictionary alloc] init];
+
+    
+    for (int i = 0; i < 10; i++) {
+        i = i+1;
+        NSIndexPath *indexPath = [NSIndexPath indexPathForRow:i inSection:0];
+        UITableViewCell *cell = [self.myTableView cellForRowAtIndexPath:indexPath];
+//        [tempDic setObject:cell.detailTextLabel.text forKey:[NSString stringWithFormat:@"%d",i]];
+        NSLog(@"%@",cell.detailTextLabel.text);
+        [tempDic setObject:cell.detailTextLabel.text forKey:[NSString stringWithFormat:@"%d",i/2]];
+
+    }
+    NSLog(@"%@",tempDic);
+    NSString *timestamp = kAPI_timestamp;
+    NSString *one = [[tempDic objectForKey:@"0"] substringWithRange:NSMakeRange(0, 1)];
+    NSLog(@"*********************%@",[one substringWithRange:NSMakeRange(0, 1)]);
+    NSString *two = [[tempDic objectForKey:@"1"] substringWithRange:NSMakeRange(0, 1)];
+    NSString *three = [[tempDic objectForKey:@"2"] substringWithRange:NSMakeRange(0, 1)];
+    NSString *four = [[tempDic objectForKey:@"3"] substringWithRange:NSMakeRange(0, 1)];
+    NSString *five = [[tempDic objectForKey:@"4"] substringWithRange:NSMakeRange(0, 1)];
+    NSLog(@"评分 %@ %@ %@ %@ %@",one,two,three,four,five);
+    
+    NSDictionary *commDic = @{@"channel":KAPI_NewChannel,@"app_ver":APPVersion,@"token":[CMCUserManager shareManager].token,@"zid":self.wuye_zid,@"one":one,@"two":two,@"three":three,@"four":four,@"five":five,@"timestamp":timestamp};
+    NSLog(@"commDic ======%@",commDic);
+    NSString *sig = [BaseUtil getSigWithArray:commDic];
+    
+    NSString *commUrl = KAPI_propertyaddeval([CMCUserManager shareManager].token, self.wuye_zid, one, two, three, four, five, timestamp, [BaseUtil md5:sig]);
+    NSLog(@"commUrl =======%@",commUrl);
+    [BaseUtil get:commUrl success:^(id respondObject) {
+        NSLog(@"提交评价 =======%@",respondObject);
+        
+        NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+        if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+            if ([respondObject objectForKey:@"data"]) {
+                [BaseUtil toast:@"提交评价成功"];
+                [self.navigationController popViewControllerAnimated:YES];
+            }
+        }else if ([[infoDic objectForKey:@"result"] intValue] == 3){
+            
+            CMCLoginViewController *loginVC = [[CMCLoginViewController alloc] init];
+            [self.navigationController pushViewController:loginVC animated:YES];
+            loginVC.hidesBottomBarWhenPushed = YES;
+            
+        } else {
+            [BaseUtil toast:@"服务端数据错误"];
+        
+        }
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+    } failure:^(NSError *error) {
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+        
+    }];
+    
+}
+
+
+- (void)_creatReslutViewWithTitle:(NSString *)title frame:(CGRect)frame{
+    
+    ReslutView *resView = [[ReslutView alloc]initWithFrame:frame];
+    resView.titleLabel.text = title;
+    [self.bottomView addSubview:resView];
+    
+}
+
+- (void)_creatReslutViewWithTitle:(NSString *)title frame:(CGRect)frame andNumber:(NSInteger)number{
+    ReslutView *resView = [[ReslutView alloc]initWithFrame:frame];
+    resView.titleLabel.text = title;
+    resView.titleLabel.textColor = [UIColor colorWithHexString:@"545454"];
+    resView.titleLabel.font = [UIFont systemFontOfSize:12.0];
+    resView.reslutView.frame = CGRectMake(resView.reslutView.frame.origin.x, resView.reslutView.frame.origin.y, 40 * number, resView.reslutView.frame.size.height);
+    [self.bottomView addSubview:resView];
+    
+}
+
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    
+    _backScrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 480)];
+    _backScrollView.contentSize = CGSizeMake(self.view.bounds.size.width, 560);
+    [self.view addSubview:_backScrollView];
+    
+    
+    [self _setupBottomView];//设置底部View
+    [self _loadData];
+    
+    
+    //    UIScrollView *scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 480)];
+    //    scrollView.contentSize = CGSizeMake(self.view.bounds.size.width, 560);
+    //    [self.view addSubview:scrollView];
+    
+    [self _creatTable];
+    
+    [self _setupSubmit];
+}
+
+
+
+- (void)viewWillDisappear:(BOOL)animated{
+    [super viewWillDisappear:animated];
+    self.submitButton.hidden = YES;//隐藏
+    
+    
+}
+
+#pragma mark - TableviewDelegate -
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    return 10;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    UITableViewCell *cell = [[UITableViewCell alloc]initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:nil];
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    
+    
+    if (indexPath.row % 2 == 0) {
+        cell.textLabel.text = [self.titleArr objectAtIndex:(indexPath.row / 2)];
+        cell.textLabel.font = [UIFont systemFontOfSize:14];
+        cell.textLabel.textColor = [UIColor colorWithHexString:@"363636"];
+    }else{
+        cell.detailTextLabel.text = @"0分";
+        cell.detailTextLabel.textColor = [UIColor colorWithHexString:@"c4c4c4"];
+        
+        _starView = [[StarView alloc]initWithFrame:CGRectMake(95, -2, 180, 33)];
+        __block NSString *str = nil;
+        [cell addSubview:_starView];
+    [_starView setButtonBlock:^(NSInteger number) {
+            //改变分值
+            cell.detailTextLabel.text = [NSString stringWithFormat:@"%ld分",(long)number];
+            str = [NSString stringWithFormat:@"%ld分",(long)number];
+        cell.detailTextLabel.textColor = [UIColor colorWithHexString:@"c4c4c4"];
+//            NSLog(@" ==== %@",cell.detailTextLabel.text);
+        }];
+//        NSLog(@"str === %@",str);
+    }
+    
+    return cell;
+    
+}
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+{
+    UITableViewCell *cell = [self.myTableView cellForRowAtIndexPath:indexPath];
+    NSLog(@"%@",cell.detailTextLabel.text);
+    NSLog(@" 分值  %ld",(long)_starView.starNumber);
+}
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
+
+@end

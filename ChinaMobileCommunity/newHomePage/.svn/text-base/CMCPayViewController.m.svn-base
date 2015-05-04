@@ -1,0 +1,380 @@
+//
+//  CMCPayViewController.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 14-12-1.
+//  Copyright (c) 2014年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCPayViewController.h"
+#import "CMCOrderSucesssViewController.h"
+
+#import "NetWorkRequest.h"
+#import <AlipaySDK/AlipaySDK.h>
+#import "MD5.h"
+#import "bestpay.h"
+#import "CMCBestPayModel.h"
+#define PayType @"3"
+
+
+@interface CMCPayViewController ()<UITextFieldDelegate>
+{
+    UILabel *_shopNameLabel;
+    UIView *_buttomView;
+    UILabel *_moneylabel;
+    UIImageView *_bestPayImageView;
+    UIImageView *_paymentView;
+    UITextField *_moneyTF;
+    NSInteger _count;
+    NSString *_timeStr;
+    
+}
+@property (nonatomic, strong)   NSMutableData *receiveData;
+@property (nonatomic, strong) NSString *orderID;//订单id
+@property (nonatomic, copy)   NSString *encodeOrderStr;
+@property (nonatomic, strong) NSMutableDictionary *params;
+
+
+
+@end
+
+@implementation CMCPayViewController
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    _params = [[NSMutableDictionary alloc] initWithCapacity:10];
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.automaticallyAdjustsScrollViewInsets = NO;
+    // Do any additional setup after loading the view.
+    //    self.title = @"买单";
+    TPKeyboardAvoidingScrollView *scrollView = [[TPKeyboardAvoidingScrollView alloc] initWithFrame:self.view.bounds];
+    scrollView.backgroundColor = k_color(@"f5f4f4");
+    [self.view addSubview:scrollView];
+    //白底
+    UIView *sectionView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.width, 40)];
+    sectionView.backgroundColor = [UIColor whiteColor];
+    [scrollView addSubview:sectionView];
+    
+    //标识
+    UIImageView *shopImageView = [[UIImageView alloc] initWithFrame:CGRectMake(13, 10, 14, 14)];
+    shopImageView.image = [UIImage imageNamed:@"shangjia"];
+    [sectionView addSubview:shopImageView];
+    
+    //商家名字
+    _shopNameLabel = [[UILabel alloc] initWithFrame:CGRectMake(shopImageView.right + 5, 10, 200, 14)];
+    _shopNameLabel.text = self.merchant_name;
+    _shopNameLabel.font = k_font(14);
+    _shopNameLabel.textColor = k_color(@"3a3a3a");
+    [sectionView addSubview:_shopNameLabel];
+    
+    
+    //
+    _buttomView = [[UIView alloc] initWithFrame:CGRectMake(0,sectionView.bottom + 13, self.view.width,self.view.height - 53)];
+    [scrollView addSubview:_buttomView];
+    _buttomView.backgroundColor = [UIColor whiteColor];
+    
+    //加分割线
+    for (int i = 0; i < 2; i++) {
+        UIView *view = [[UIView alloc]init];
+        view.frame = CGRectMake(10, 42 * (i + 1), self.view.width - 20, 0.5);
+        view.backgroundColor = k_color(@"ededed");
+        [_buttomView addSubview:view];
+    }
+    
+    //本次消费金额
+    _moneylabel = [[UILabel alloc] initWithFrame:CGRectMake(18, 14.5, 85, 13)];
+    _moneylabel.text = [NSString stringWithFormat:@"本次消费金额:"];
+    _moneylabel.font = k_font(13);
+    _moneylabel.textColor = k_color(@"505050");
+    [_buttomView addSubview:_moneylabel];
+    
+    
+    //输入金钱数目
+    _moneyTF = [[UITextField alloc] initWithFrame:CGRectMake(_moneylabel.right,14.5, 200, 13)];
+    _moneyTF.font = [UIFont systemFontOfSize:13];
+    _moneyTF.delegate = self;
+    _moneyTF.textColor = k_color(@"505050");
+    _moneyTF.placeholder = @"点击输入金额";
+    _moneyTF.adjustsFontSizeToFitWidth = YES;
+    _moneyTF.keyboardType = UIKeyboardTypeDecimalPad;
+    NSMutableAttributedString *placeholderStr = [[NSMutableAttributedString alloc]initWithString:_moneyTF.placeholder];
+    [placeholderStr addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:13] range:NSMakeRange(0, _moneyTF.placeholder.length)];
+    _moneyTF.attributedPlaceholder = placeholderStr;
+    [_buttomView addSubview:_moneyTF];
+    
+    
+    UILabel *youhuiLabel = [[UILabel alloc] initWithFrame:CGRectMake(18,_moneylabel.bottom + 29, 80, 13)];
+    youhuiLabel.textColor = k_color(@"505050");
+    youhuiLabel.font = k_font(13);
+    youhuiLabel.text = @"支付方式:";
+    [_buttomView addSubview:youhuiLabel];
+    
+    //翼支付
+    _bestPayImageView = [[UIImageView alloc] initWithFrame:CGRectMake(youhuiLabel.right + 5, youhuiLabel.top, 13, 13)];
+    _bestPayImageView.image = [UIImage imageNamed:@"选_25"];
+    _bestPayImageView.userInteractionEnabled = YES;
+    //    [_buttomView addSubview:_bestPayImageView];
+//    [_buttomView addSubview:_bestPayImageView];
+    
+    UILabel *bestPayLabel = [[UILabel alloc] initWithFrame:CGRectMake(_bestPayImageView.right + 5,_bestPayImageView.top, 50, 13)];
+    bestPayLabel.text = @"翼支付";
+    bestPayLabel.font = [UIFont systemFontOfSize:13.0];
+    bestPayLabel.textColor = [UIColor colorWithHexString:@"505050"];
+
+    
+    //翼支付
+    UIButton *bestPayBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    bestPayBtn.frame = CGRectMake(_bestPayImageView.frame.origin.x, bestPayLabel.frame.origin.y, 20+5+40, 35);
+    [bestPayBtn addTarget:self action:@selector(didClickbestPayBtn:) forControlEvents:UIControlEventTouchUpInside];
+    [_buttomView addSubview:bestPayBtn];
+    _count = 1;
+    
+    
+    _paymentView = [[UIImageView alloc] init];
+    _paymentView.userInteractionEnabled = YES;
+    _paymentView.frame = CGRectMake(youhuiLabel.right + 5,bestPayLabel.top, 13, 13);
+    _paymentView.image = [UIImage imageNamed:@"convenience_select"];
+    _paymentView.frame = CGRectMake(youhuiLabel.right + 5,bestPayLabel.top, 13, 13);
+    _paymentView.image = [UIImage imageNamed:@"convenience_select"];
+    [_buttomView addSubview:_paymentView];
+    
+    
+    UILabel *paymentlabel = [[UILabel alloc] initWithFrame:CGRectMake(_paymentView.right + 5, youhuiLabel.frame.origin.y, 50, 13)];
+    paymentlabel.text = @"支付宝";
+    paymentlabel.textColor = k_color(@"505050");
+    paymentlabel.font = [UIFont systemFontOfSize:13.0];
+    [_buttomView addSubview:paymentlabel];
+    
+    UIButton *zhifuBtt = [UIButton buttonWithType:UIButtonTypeCustom];
+    zhifuBtt.frame = CGRectMake(_paymentView.frame.origin.x, _paymentView.frame.origin.y, 20+5+40, 35);
+    [zhifuBtt addTarget:self action:@selector(didClickpaymentButton:) forControlEvents:UIControlEventTouchUpInside];
+    [_buttomView addSubview:zhifuBtt];
+    
+    
+    //付款
+    UIButton *payButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    payButton.frame = CGRectMake(18, youhuiLabel.bottom + 14.5 + 26,self.view.width - 36, 41);
+    [payButton addTarget:self action:@selector(didClickpayButton:) forControlEvents:UIControlEventTouchUpInside];
+    [payButton setBackgroundImage:[UIImage imageNamed:@"确定"] forState:UIControlStateNormal];
+    payButton.userInteractionEnabled = YES;
+    [payButton setTitle:@"付款" forState:UIControlStateNormal];
+    [_buttomView addSubview:payButton];
+    
+}
+
+//获取当前时间
+- (NSString *)getOrderTime
+{
+    NSDate *  senddate=[NSDate date];
+    NSDateFormatter  *dateformatter=[[NSDateFormatter alloc] init];
+    [dateformatter setDateFormat:@"yyyyMMddHHmmss"];
+    NSString *  locationString = [dateformatter stringFromDate:senddate];
+    return locationString;
+    
+}
+
+- (void)didClickRightButton:(UIButton *)button
+{
+    
+    
+    
+}
+//点击翼支付
+- (void)didClickbestPayBtn:(UIButton *)button
+{
+    _count = 2;
+    _bestPayImageView.image = [UIImage imageNamed:@"选_25"];
+    _paymentView.image = [UIImage imageNamed:@"未选_25"];
+    
+    
+    
+}
+//点击支付宝
+- (void)didClickpaymentButton:(UIButton *)button
+{
+    _count = 1;
+    _bestPayImageView.image = [UIImage imageNamed:@"未选_25"];
+    _paymentView.image = [UIImage imageNamed:@"选_25"];
+    
+    
+}
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
+    [_moneyTF resignFirstResponder];
+    
+    
+    return YES;
+}
+//付款
+- (void)didClickpayButton:(UIButton *)button
+{
+    
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    //     _timestamp = [self getOrderTime];
+    NSString *timestamp = kAPI_timestamp;
+    NSString *payment = [NSString stringWithFormat:@"%ld",_count];
+    NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"zid":k_zid,@"mid":self.merchant_id,@"service_id":@"3",@"money":_moneyTF.text,@"express_money":@"0",@"content":@"",@"name":@"",@"phone":@"",@"address_id":@"0",@"comment":@"",@"payment":payment,@"timestamp":timestamp};
+    
+    NSLog(@"dic ======= %@",dic);
+    NSString *sig = KAPI_GetSig(dic);
+    NSDictionary *tmpDic = @{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"zid":k_zid,@"mid":self.merchant_id,@"service_id":@"3",@"money":_moneyTF.text,@"express_money":@"0",@"content":@"",@"name":@"",@"phone":@"",@"address_id":@"0",@"comment":@"",@"payment":payment,@"timestamp":timestamp,@"sig":sig};
+    NSString *url = KAPI_UserNewOrder;
+    [BaseUtil post:url postBody:tmpDic success:^(id responseObj) {
+        NSLog(@"--------%@",responseObj);
+        if ([[[[responseObj objectForKey:@"info"] objectForKey:@"result"] stringValue] isEqualToString:@"0"])  {
+            NSDictionary *dataDic = [responseObj objectForKey:@"data"];
+            NSString *order_id = [dataDic objectForKey:@"order_id"];
+            
+            if (_count == 1 ) {
+                //支付订单
+                [self orderPayWithOrder_id:order_id];
+            }
+            else if (_count == 2) {
+                //支付订单 翼支付
+                //                [self bestPayWithOrder_id:order_id];
+                //               zjkal
+                CMCBestPayModel *model = [[CMCBestPayModel alloc] init];
+                [model bestWithOrder_id:order_id money:_moneyTF.text];
+            }
+            
+            
+            
+        }
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+    } ailure:^(NSError *error) {
+        
+        [BaseUtil toast:@"付款失败，稍后再试"];
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+        
+    }];
+}
+
+//0309写的
+
+- (void)orderPayWithOrder_id:(NSString *)order_id{
+    
+    NSString *timestamp = kAPI_timestamp;
+    NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"order_id":order_id,@"timestamp":timestamp};
+    NSString *sig = KAPI_GetSig(dic);
+    NSString *url = KAPI_orderPay(order_id, timestamp, sig);
+    
+    [BaseUtil get:url success:^(id respondObject) {
+        NSLog(@"----------resopObject === %@",respondObject);
+        if ([[[[respondObject objectForKey:@"info"] objectForKey:@"result"]stringValue] isEqualToString:@"0"]) {
+            NSDictionary *dataDic = [respondObject objectForKey:@"data"];
+            NSString *money = [dataDic objectForKey:@"money"];
+            NSString *order_id = [dataDic objectForKey:@"order_id"];
+            NSString *payment_type = [dataDic objectForKey:@"payment_type"];
+            //跳转到支付宝
+            [self payMentWithOrder_id:order_id];
+        }
+        
+        
+    } failure:^(NSError *error) {
+        
+    }];
+    
+    
+}
+
+- (void)payMentWithOrder_id:(NSString *)order_id{
+    if (_count == 1) {
+        if (_moneyTF.text) {
+            Order *order = [[Order alloc] init];
+            order.partner = PartnerID;
+            order.seller = SellerID;
+            order.tradeNO = order_id;//订单id
+            order.productName = _shopNameLabel.text; //商品标题
+            order.productDescription = @"购买的商品";//商品描述
+            order.amount = _moneyTF.text;//商品价格
+            order.notifyURL = kAPI_NotifyURL;//回调的url
+            order.service = @"mobile.securitypay.pay";
+            order.paymentType = @"1";
+            order.inputCharset = @"utf-8";
+            order.itBPay = @"30m";
+            order.showUrl = @"m.alipay.com";
+            NSString *appScheme = @"com.OneOneFourUser";
+            
+            NSString *orderSpec = [order description];
+            id<DataSigner> signer = CreateRSADataSigner(PartnerPrivKey);
+            
+            NSString *signedString = [signer signString:orderSpec];
+            
+            NSString *orderString = nil;
+            if (orderString == nil) {
+                orderString = [NSString stringWithFormat:@"%@&sign=\"%@\"&sign_type=\"%@\"",
+                               orderSpec, signedString, @"RSA"];
+            }
+            [[AlipaySDK defaultService] payOrder:orderString fromScheme:appScheme callback:^(NSDictionary *resultDic) {
+                NSString *resultStatusStr = [resultDic objectForKey:@"resultStatus"];
+                NSString *msg = @"";
+                if ([resultStatusStr isEqualToString:@"6001"]) {
+                    msg=@"您中途取消支付";
+                }
+                if ([resultStatusStr isEqualToString:@"9000"]) {
+                    msg=@"支付宝支付成功";
+                    CMCOrderSucesssViewController *sucessVC = [[CMCOrderSucesssViewController alloc] init];
+                    [self.navigationController pushViewController:sucessVC animated:YES];
+                    sucessVC.hidesBottomBarWhenPushed = YES;
+                    
+                }
+                if([resultStatusStr isEqualToString:@"4000"]){
+                    msg = @"支付宝异常,请尝试重新购买";
+                }
+                [BaseUtil alertWithTitle:@"提示" msg:msg];
+            }];
+            
+            
+        } else {
+            
+            [BaseUtil toast:@"请输入消费金额"];
+            
+        }
+        
+    }
+}
+
+
+//加数据
+- (void)loadData{
+    
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"app_ver":APPVersion,@"mid":self.merchant_id,@"type_id":PayType,@"page":@"0",@"nums":@"8",@"timestamp":kAPI_timestamp,@"service_id":self.service_id};
+    NSLog(@"dic = %@",dic);
+    NSString *sig = KAPI_GetSig(dic);
+    NSString *url =  KAPI_MerchantGoodsList(self.merchant_id, PayType, @"0", @"8", sig,self.service_id);
+    [BaseUtil get:url success:^(id respondObject) {
+        
+        NSLog(@"pay =  %@",respondObject);
+        
+    } failure:^(NSError *error) {
+        
+        
+        
+    }];
+    
+}
+
+
+
+
+
+
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+ #pragma mark - Navigation
+ 
+ // In a storyboard-based application, you will often want to do a little preparation before navigation
+ - (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+ // Get the new view controller using [segue destinationViewController].
+ // Pass the selected object to the new view controller.
+ }
+ */
+
+@end

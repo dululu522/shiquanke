@@ -1,0 +1,203 @@
+//
+//  CMCPropertyAddressTableVC.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 14-11-11.
+//  Copyright (c) 2014年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCPropertyAddressTableVC.h"
+
+@interface CMCPropertyAddressTableVC ()
+{
+
+    NetWorkRequest *_request;
+}
+@property (nonatomic, strong) NSMutableArray *addressArr;
+@property (nonatomic, strong) NSMutableArray *center_idArr;
+
+@end
+
+@implementation CMCPropertyAddressTableVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    _request = [[NetWorkRequest alloc] init];
+    _request.delegate = self;
+    self.title = @"物业地址";
+    // Uncomment the following line to preserve selection between presentations.
+    // self.clearsSelectionOnViewWillAppear = NO;
+    
+    // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
+    // self.navigationItem.rightBarButtonItem = self.editButtonItem;
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.addressArr = [[NSMutableArray alloc] init];
+    self.center_idArr = [[NSMutableArray alloc] init];
+    self.tableView.frame = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height -64);
+    [self loadData];
+    
+    
+}
+#pragma mark-
+#pragma mark- 获取我的设置 物业地址中得数据
+//获取 我的设置 物业地址中得数据
+- (void)loadData
+{
+    NSString *timestamp = kAPI_timestamp;
+    NSDictionary *dic =@{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"timestamp":timestamp};
+    NSString *sig =[BaseUtil getSigWithArray:dic];
+    NSString *requestUrl = KAPI_myproperty(timestamp, [BaseUtil md5:sig], [CMCUserManager shareManager].token);
+    [BaseUtil get:requestUrl success:^(id respondObject) {
+        NSLog(@"物业地址%@",respondObject);
+        NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+        
+        [BaseUtil pushToLoginVCWithRespondObj:respondObject withViewController:self];
+        [BaseUtil errorMesssage:respondObject];
+        
+        if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+            if ([respondObject objectForKey:@"data"]) {
+                NSArray *dataArr = [respondObject objectForKey:@"data"];
+                for (NSDictionary *tempDic in dataArr) {
+                    [self.addressArr addObject:[tempDic objectForKey:@"address"]];
+                }
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                [self.tableView reloadData];
+            } else {
+                [BaseUtil toast:@"暂无数据"];
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+            }
+        } else {
+            [BaseUtil toast:@"数据加载失败,请重试"];
+            [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+        }
+    } failure:^(NSError *error) {
+        
+    }];
+}
+//请求数据成功之后执行代理方法
+- (void)request:(NetWorkRequest *)netWorkRequest
+   didFinishing:(NSData *)data
+{
+    [self.addressArr removeAllObjects];
+    NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    NSDictionary *infoDic = [dic objectForKey:@"info"];
+    if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+        if ([dic objectForKey:@"data"]) {
+            NSArray *dataArr = [dic objectForKey:@"data"];
+            for (NSDictionary *tempDic in dataArr) {
+                [self.addressArr addObject:[tempDic objectForKey:@"address"]];
+            }
+            [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+            [self.tableView reloadData];
+        } else {
+        
+            [BaseUtil toast:@"暂无数据"];
+            [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+        }
+
+    } else {
+    
+        [BaseUtil toast:@"数据加载失败,请重试"];
+        [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+    
+    
+    }
+}
+//请求数据失败之后执行代理方法
+- (void)request:(NetWorkRequest *)netWorkRequest
+didFailWithError:(NSError *)error
+{
+
+
+
+
+}
+
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+#pragma mark - Table view data source
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+    // Return the number of sections.
+    return 1;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+    // Return the number of rows in the section.
+    return self.addressArr.count;
+}
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
+{
+
+    return 40;
+
+
+}
+
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+    static NSString *str = @"reused";
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:str];
+    if (cell == nil) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:str];
+    }
+//    cell.backgroundColor = [UIColor orangeColor];
+//    [cell creatNameStr:nil  title:[self.addressArr objectAtIndex:indexPath.row]];
+    cell.textLabel.text = [self.addressArr objectAtIndex:indexPath.row];
+    cell.textLabel.textColor = [UIColor colorWithHexString:@"606060"];
+    // Configure the cell...
+    cell.selectionStyle = UITableViewCellSelectionStyleNone;//tableview选中一行后，不显示选中颜色的方法
+    
+    return cell;
+}
+
+
+/*
+// Override to support conditional editing of the table view.
+- (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Return NO if you do not want the specified item to be editable.
+    return YES;
+}
+*/
+
+/*
+// Override to support editing the table view.
+- (void)tableView:(UITableView *)tableView commitEditingStyle:(UITableViewCellEditingStyle)editingStyle forRowAtIndexPath:(NSIndexPath *)indexPath {
+    if (editingStyle == UITableViewCellEditingStyleDelete) {
+        // Delete the row from the data source
+        [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
+    } else if (editingStyle == UITableViewCellEditingStyleInsert) {
+        // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
+    }   
+}
+*/
+
+/*
+// Override to support rearranging the table view.
+- (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath {
+}
+*/
+
+/*
+// Override to support conditional rearranging of the table view.
+- (BOOL)tableView:(UITableView *)tableView canMoveRowAtIndexPath:(NSIndexPath *)indexPath {
+    // Return NO if you do not want the item to be re-orderable.
+    return YES;
+}
+*/
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

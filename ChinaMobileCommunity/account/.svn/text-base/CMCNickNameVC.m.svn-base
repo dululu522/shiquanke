@@ -1,0 +1,161 @@
+//
+//  CMCNickNameVC.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 14-9-30.
+//  Copyright (c) 2014年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCNickNameVC.h"
+
+@interface CMCNickNameVC ()
+{
+
+    NetWorkRequest *_reuest;
+}
+@property (nonatomic, strong) UITextField *nameTextField;
+
+
+@end
+
+@implementation CMCNickNameVC
+
+- (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
+{
+    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    if (self) {
+        // Custom initialization
+    }
+    return self;
+}
+
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+    // Do any additional setup after loading the view.
+    
+//    UIBarButtonItem *rightItem = [[UIBarButtonItem alloc] initWithTitle:@"完成" style:UIBarButtonItemStyleDone target:self action:@selector(clickDoneButton)];
+//    
+//    self.navigationItem.rightBarButtonItem = rightItem;
+    [self creatRightBarButton];
+    
+    
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.nameTextField = [[UITextField alloc] initWithFrame:CGRectMake(10, 74, self.view.bounds.size.width-20, 40)];
+    _nameTextField.delegate = self;
+    _nameTextField.clearButtonMode = UITextFieldViewModeWhileEditing;
+    [_nameTextField setBorderStyle:UITextBorderStyleRoundedRect];
+    [self.view addSubview:_nameTextField];
+}
+- (void)creatRightBarButton
+{
+    UIButton *saveButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    [saveButton setTitle:@"完成" forState:UIControlStateNormal];
+    [saveButton setTintColor:[UIColor whiteColor]];
+    [saveButton setBackgroundImage:[UIImage imageNamed:@"rightBar_btn"] forState:UIControlStateNormal];
+    [saveButton addTarget:self action:@selector(clickDoneButton) forControlEvents:UIControlEventTouchUpInside];
+    saveButton.frame = CGRectMake(self.view.bounds.size.width - 50, 20, 50, 40);
+    UIBarButtonItem *rightButtonItem = [[UIBarButtonItem alloc] initWithCustomView:saveButton];
+    self.navigationItem.rightBarButtonItem = rightButtonItem;
+
+
+}
+//活动详情中得评价
+- (void)clickDoneButton
+{
+    if ([self.category isEqualToString:@"活动详情"]) {
+        NSString *timestamp = kAPI_timestamp;
+        NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"id":self.activity_id,@"content":_nameTextField.text,@"timestamp":timestamp};
+        
+        NSString *sig = [BaseUtil getSigWithArray:dic];
+        
+        NSString *requestUrl = kAPI_evaluateinfo([CMCUserManager shareManager].token, self.activity_id, [BaseUtil md5:sig], _nameTextField.text);
+
+        [BaseUtil get:requestUrl success:^(id respondObject) {
+            [BaseUtil toast:@"评价成功"];
+            [self.navigationController popViewControllerAnimated:YES];
+        } failure:^(NSError *error) {
+            
+        }];
+        
+    } else {
+    [CMCUserManager shareManager].nickname = _nameTextField.text;
+    NSString *reuestStr = [BaseUtil getRequestUrlByType:@"nickname" AndValue:_nameTextField.text];
+    [BaseUtil get:reuestStr success:^(id respondObject) {
+        NSLog(@"性别: %@",respondObject);
+        [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+        NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+        if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+            if ([respondObject objectForKey:@"data"]) {
+                [BaseUtil toast:@"修改成功"];
+                [MBProgressHUD hideHUDForView:self.view animated:YES];
+                [self.navigationController popViewControllerAnimated:YES];
+            }else {
+                [BaseUtil toast:@"修改失败,请重试"];
+                [MBProgressHUD hideHUDForView:self.view animated:YES];
+
+            }
+        } else {
+        
+            [BaseUtil toast:@"服务端返回数据错误"];
+            [MBProgressHUD hideHUDForView:self.view animated:YES];
+
+        
+        }
+    } failure:^(NSError *error) {
+        
+    }];
+    [_nameTextField resignFirstResponder];
+    }
+    
+}
+//请求数据成功之后执行代理方法
+- (void)request:(NetWorkRequest *)netWorkRequest
+   didFinishing:(NSData *)data
+{
+    NSDictionary *dic = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+    NSDictionary *dataDic = [dic objectForKey:@"info"];
+    
+    if ([[dataDic objectForKey:@"info"] intValue] == 0) {
+        [BaseUtil toast:@"请求成功"];
+        [self.navigationController popViewControllerAnimated:YES];
+        
+    }
+    
+
+
+}
+
+//请求数据失败之后执行代理方法
+- (void)request:(NetWorkRequest *)netWorkRequest
+didFailWithError:(NSError *)error
+{
+
+
+
+}
+- (BOOL)textFieldShouldReturn:(UITextField *)textField
+{
+    [_nameTextField resignFirstResponder];
+    return YES;
+    
+}
+
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender
+{
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end

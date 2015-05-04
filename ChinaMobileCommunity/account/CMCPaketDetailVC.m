@@ -1,0 +1,342 @@
+//
+//  CMCPaketDetailVC.m
+//  ChinaMobileCommunity
+//
+//  Created by mac on 15-3-6.
+//  Copyright (c) 2015年 zhangyanqiu. All rights reserved.
+//
+
+#import "CMCPaketDetailVC.h"
+#import "CMCPaketDetailCell.h"
+#import "CMCPaketInfoCell.h"
+#import "CMCQScrollView.h"
+
+@interface CMCPaketDetailVC ()<UITableViewDataSource,UITableViewDelegate,UIAlertViewDelegate>
+
+
+//@property (nonatomic,strong)UIImageView *bannerImgV;
+@property (nonatomic,strong)UITableView *myTableView;
+@property (nonatomic, strong) NSMutableDictionary *detailDic;
+@property (nonatomic, strong) NSMutableDictionary *secondDic;
+@property (nonatomic, strong) NSMutableDictionary *userDic;
+@property (nonatomic, strong) CMCQScrollView *scrollView;
+@property (nonatomic, strong) NSMutableArray *bannerArr;
+
+
+
+@end
+
+@implementation CMCPaketDetailVC
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.title = @"红包详情";
+    self.detailDic = [[NSMutableDictionary alloc] init];
+    self.secondDic = [[NSMutableDictionary alloc] init];
+    self.userDic = [[NSMutableDictionary alloc] init];
+    self.bannerArr = [[NSMutableArray alloc] init];
+
+    // Do any additional setup after loading the view.
+    [self createSubViews];
+    [self loadData];
+}
+
+#pragma mark - 创建子视图 - 
+- (void)createSubViews{
+    [self setupBanner];
+    [self setupTableView];
+    
+}
+- (void)setupBanner{
+    _scrollView = [[CMCQScrollView alloc]init];
+    _scrollView.frame = CGRectMake(0, 0, self.view.width, 130);
+}
+
+- (void)setupTableView{
+    _myTableView = [[UITableView alloc]initWithFrame:CGRectMake(0, 0, self.view.width, self.view.height - 64) style:UITableViewStyleGrouped];
+    _myTableView.delegate = self;
+    _myTableView.dataSource = self;
+    _myTableView.tableHeaderView = _scrollView;
+    _myTableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    
+    [self.view addSubview:_myTableView];
+}
+
+#pragma mark － 数据请求 － 
+
+- (void)loadData{
+    [_bannerArr removeAllObjects];
+    [self.detailDic removeAllObjects];
+    [self.userDic removeAllObjects];
+    [self.secondDic removeAllObjects];
+    NSString *timestamp = kAPI_timestamp;
+    if ([CMCUserManager shareManager].token && self.bonusID) {
+        NSDictionary *dic = @{@"channel":KAPI_NewChannel,@"token":[CMCUserManager shareManager].token,@"app_ver":APPVersion,@"id":self.bonusID,@"timestamp":timestamp};
+        NSString *sig = KAPI_GetSig(dic);
+        NSString *url = KAPI_MyBonusDeatail(self.bonusID,timestamp, sig);
+        [BaseUtil get:url success:^(id respondObject) {
+            [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+            NSDictionary *infoDic = [respondObject objectForKey:@"info"];
+            
+            [BaseUtil pushToLoginVCWithRespondObj:respondObject withViewController:self];
+            [BaseUtil errorMesssage:respondObject];
+            
+            if ([[infoDic objectForKey:@"result"] intValue] == 0) {
+                if ([respondObject objectForKey:@"data"]) {
+                    NSDictionary *dataDic = [respondObject objectForKey:@"data"];
+                    if ([[dataDic objectForKey:@"de"] isKindOfClass:[NSDictionary class]]) {
+                        NSDictionary *deDic = [dataDic objectForKey:@"de"];
+                        if ([[dataDic objectForKey:@"info"] isKindOfClass:[NSDictionary class]]) {
+                            NSDictionary *infoDic = [dataDic objectForKey:@"info"];
+                            
+                            NSString *image = [infoDic objectForKey:@"logo"];
+                            NSURL *url = [BaseUtil systemRandomlyGenerated:image type:@"20" number:@"1"];
+                            [_bannerArr addObject:url];
+                        }
+                        if (_bannerArr.count) {
+                            self.scrollView.imageArr = [NSMutableArray arrayWithArray:_bannerArr];
+                            [self.scrollView creatWithFrame:CGRectMake(0, 0, self.view.frame.size.width, 130) cout:self.scrollView.imageArr.count];
+                        }
+                        
+                        [self.detailDic addEntriesFromDictionary:deDic];
+                    }
+                    
+                    if ([dataDic objectForKey:@"info"]) {
+                        [self.secondDic addEntriesFromDictionary:[dataDic objectForKey:@"info"]];
+                        
+                    }
+                    if ([dataDic objectForKey:@"user"]) {
+                        NSArray *userArr = [dataDic objectForKey:@"user"];
+                        [self.userDic addEntriesFromDictionary:[userArr objectAtIndex:0]];
+                        
+                    }
+                    [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+                    [self.myTableView reloadData];
+                } else {
+                
+                    [BaseUtil toast:@"暂无数据"];
+                    [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+                
+                }
+            } else if([[infoDic objectForKey:@"result"] intValue] == 3){
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+
+                CMCLoginViewController *loginVC = [[CMCLoginViewController alloc] init];
+                loginVC.hidesBottomBarWhenPushed = YES;
+                [self.navigationController pushViewController:loginVC animated:YES];
+            
+            } else {
+                [MBProgressHUD hideAllHUDsForView:self.view animated:YES];
+                [BaseUtil toast:@"服务端数据错误"];
+            
+            }
+            NSLog(@"respondObject ============ %@",respondObject);
+            
+        } failure:^(NSError *error) {
+            
+        }];
+    }
+
+    
+    
+    
+}
+
+
+
+#pragma mark - tableviewdelegate - 
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView{
+    return 3;
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForFooterInSection:(NSInteger)section{
+    return 0.1;
+}
+
+
+- (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section{
+    if (section == 0) {
+        return 48;
+    }
+    if (section == 1) {
+        return 29;
+    }
+    return 30;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    //第一分区
+    if (indexPath.section == 0) {
+
+        
+        if ([[self.userDic objectForKey:@"state"] intValue] == 1){
+            return 145;
+        }
+        return 100;//0318
+    }
+    if (indexPath.section == 1) {
+        if ([self.detailDic objectForKey:@"merchant_names"]) {
+            CGRect rect = [BaseUtil returnHeightWithContent:[self.detailDic objectForKey:@"merchant_names"] WithFont:13 width:self.view.width - 20 height:0];
+            CGFloat height = rect.size.height;
+            return height + 20;
+        }
+    }
+    if (indexPath.section == 2) {
+        if ([self.detailDic objectForKey:@"intro"]) {
+            CGRect rect = [BaseUtil returnHeightWithContent:[self.detailDic objectForKey:@"intro"] WithFont:13 width:self.view.width - 20 height:0];
+            CGFloat height = rect.size.height;
+            return height + 20;
+        }
+
+    }
+    return 0;
+
+}
+
+
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (section == 0) {
+        return 1;
+    }
+    if (section == 1) {
+        return 1;
+    }
+    return 1;
+}
+
+- (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section{
+    UIView *view = [[UIView alloc]init];
+    view.frame = CGRectMake(0, 0, self.view.width, 30);
+    view.backgroundColor = k_color(@"f5f4f4");
+    
+    //第一分区
+    if (section == 0) {
+        UILabel *priceL = [[UILabel alloc]init];
+        priceL.frame = CGRectMake(10, 14, 100, 22);
+        priceL.font = k_font(18);
+        priceL.textColor = k_color(@"ff0200");
+        [view addSubview:priceL];
+        if ([self.secondDic objectForKey:@"money"]) {
+            priceL.text = [NSString stringWithFormat:@"¥%@",[self.secondDic objectForKey:@"money"]];
+
+        }
+        
+        //是否使用过
+        UILabel *stateL = [[UILabel alloc]init];
+        stateL.frame = CGRectMake(245, 14, 50, 22);
+        stateL.font = [UIFont systemFontOfSize:14];
+        stateL.textColor = [UIColor colorWithHexString:@"444444"];
+        if ([[self.userDic objectForKey:@"state"] intValue] == 0) {
+            stateL.text = @"可使用";
+
+        }
+        if ([[self.userDic objectForKey:@"state"] intValue] == 1) {
+            stateL.text = @"已使用";
+            
+        }
+        if ([[self.userDic objectForKey:@"state"] intValue] == 2) {
+            stateL.text = @"已过期";
+            
+        }
+        [view addSubview:stateL];
+        
+    }
+    
+    //第二分区
+    if (section == 1 | section == 2) {
+        UILabel *nameL = [[UILabel alloc] init];
+        nameL.frame = CGRectMake(0, 10, self.view.width, 13);
+        nameL.textColor = k_color(@"444444");
+        nameL.font = k_font(13);
+        if (section == 1) {
+            nameL.text = @"   可使用商户";
+        }else{
+            nameL.text = @"   使用须知";
+        }
+        [view addSubview:nameL];
+    }
+    
+    return view;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    if (indexPath.section == 0) {
+        CMCPaketDetailCell *cell = [[CMCPaketDetailCell alloc]init];
+        if (self.detailDic) {
+            cell.detailDic = self.detailDic;
+            cell.userDic = self.userDic;
+            cell.deDic = self.detailDic;
+            cell.infoDic = self.secondDic;
+        }
+        cell.dataModel = self.dataModel;//0318
+        return cell;
+    }
+    
+//    
+//    if (indexPath.section == 1) {
+//        CMCPaketInfoCell *cell = [[CMCPaketInfoCell alloc]init];
+//        if ([self.detailDic objectForKey:@"merchant_names"]) {
+//            cell.dataStr = [self.detailDic objectForKey:@"merchant_names"];
+//        
+//        }
+//        return cell;
+//    }
+//    if (indexPath.section == 2) {
+//
+//        CMCPaketInfoCell *cell = [[CMCPaketInfoCell alloc]init];
+//        if ([self.detailDic objectForKey:@"intro"]) {
+//            cell.dataStr = [self.detailDic objectForKey:@"intro"];
+//        }
+//        return cell;
+//        
+//    }
+
+     CMCPaketInfoCell *cell = [[CMCPaketInfoCell alloc]init];
+    
+    if (indexPath.section == 1) {
+        if ([self.detailDic objectForKey:@"merchant_names"]) {
+        cell.dataStr = [self.detailDic objectForKey:@"merchant_names"];
+            
+      }
+    }
+    if (indexPath.section == 2) {
+                if ([self.detailDic objectForKey:@"intro"]) {
+                    cell.dataStr = [self.detailDic objectForKey:@"intro"];
+                }
+    }
+//    CMCPaketInfoCell *cell = [[CMCPaketInfoCell alloc]init];
+//    if (indexPath.section == 1) {
+//        if ([self.detailDic objectForKey:@""]) {
+//            <#statements#>
+//        }
+//    }
+//    cell.dataStr = @"测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试";
+//    return cell;
+    return cell;
+}
+
+
+
+
+#pragma mark end
+- (void)didReceiveMemoryWarning {
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
+/*
+#pragma mark - Navigation
+
+// In a storyboard-based application, you will often want to do a little preparation before navigation
+- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+    // Get the new view controller using [segue destinationViewController].
+    // Pass the selected object to the new view controller.
+}
+*/
+
+@end
